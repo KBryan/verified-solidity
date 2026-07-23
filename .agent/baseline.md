@@ -1,7 +1,13 @@
 # Validation Baseline
 
-**Date**: 2026-07-21 (updated after full build + test runs)
-**Maturity Level**: 1 (see .agent/maturity.md)
+**Date**: 2026-07-22 (updated by /prime re-run after `.adws` install clobbered AGENTS.md/manifest.yml)
+**Maturity Level**: 3 (see .agent/maturity.md)
+
+## /prime re-validation (2026-07-22)
+- Context: the `.adws` installer overwrote AGENTS.md and manifest.yml with blank templates (backups at `*.backup.1784773667`). This /prime run restored the real content, refreshed for the post-Phase-4 state (repo renamed verified-solidity, history squashed to `f5c2932`, lts-22.44/GHC 9.6.7, DEPS pins solc 0.8.26 / z3 4.12.5).
+- `cd hs && make expand`: first attempt hit the known mo/bash-3.2 crash and truncated `src/Reach/Version.hs` to 0 bytes (the exact hazard documented below); repaired by patching mo (guarded the two unguarded `MO_FUNCTION_CACHE_*[@]` loops at lines ~907/913) into the session scratchpad `bin/` and re-running with `rm`'d targets: **PASS** — Version.hs (859 B) and sol/stdlib.sol (23 KB, OpenZeppelin expansion) regenerated intact. The durable fix (`brew install bash` or upgrading mo) is still outstanding.
+- Toolchain re-audit: shellcheck present, forge present, Docker daemon **running**; hadolint, ag, goal still missing; solc 0.8.26 / z3 4.12.5 / stack 3.1.1 match DEPS pins.
+- Full `hs-build`/`hs-test` not re-run this session — last full run (812/812 PASS on lts-22.44, 2026-07-22, recorded below) is current for HEAD.
 
 ## Test Results
 - `cd hs && make hs-build`: **PASS** — full stack build on lts-19.7/GHC 9.0.2, 186 actions, reachc/reach/reach-test installed.
@@ -35,33 +41,34 @@
 - Hop 3, lts-21.25 → lts-22.44 (GHC 9.6.7), committed `56bf33153` (+ pragma-order fixup `eb9981139`): **hs-build PASS**, **hs-test 812/812 PASS (2425s)**, zero golden drift. Mechanical API migrations required (12 rounds of iterative builds): mtl 2.3 Control.Monad re-export removal (12 files net), base16-1.0 renames (Eval/Core decodeBase16Untyped; Backend/JS extractBase16 — emitted JS byte-identical), scotty 0.20 (ActionT arity, MonadUnliftIO for WebM via new unliftio-core dep, documented -Wno-deprecations for param/raise fall-through), optparse-applicative 0.18 prettyprinter migration (monomorphic text shim in app/reach/Main.hs). Post-hop validation on the 9.6.7 binary: local compile PASS, Foundry deploy PASS, ETH-devnet deploy smoke PASS, hs-format idempotent vs HEAD.
 - **Phase 4 COMPLETE (2026-07-22)**: lts-19.7 → lts-22.44, GHC 9.0.2 → 9.6.7, in three shippable resolver commits; all five fork pins survived (ormolu decoupled into hs/ormolu-tool/, others compile unchanged). README stack floor updated to v2.15+.
 
-## Lint Results
-- `make sh-lint`: **SKIPPED** — `shellcheck` not installed.
+## Lint Results (updated 2026-07-22)
+- `make sh-lint`: shellcheck installed; tracked scripts clean (repo-wide run fails only on untracked `AgenticEngineeringFramework/` scripts — pre-existing, not in git).
 - `make docker-lint`: **SKIPPED** — `hadolint` not installed.
 - `make check`: **SKIPPED** — `ag` (the_silver_searcher) not installed.
 
-## Build Results
-- `cd hs && make hs-build`: **SKIPPED** — long stack build; deferred.
-- `cd js && make build`: **SKIPPED** — Docker daemon not running.
-- `cd docs && make build`: **SKIPPED** — Docker daemon not running.
+## Build Results (updated 2026-07-22)
+- `cd hs && make hs-build`: **PASS** on lts-22.44/GHC 9.6.7 (see Phase 4 above).
+- `cd js && make build`: **NOT RUN** — Docker daemon now running, but js image builds not yet exercised.
+- `cd docs && make build`: **NOT RUN** — Docker daemon now running, but docs build not yet exercised.
 
-## Toolchain Audit (2026-07-21)
+## Toolchain Audit (2026-07-22)
 | Tool | Status | Pinned (DEPS) | Local |
 |---|---|---|---|
-| stack | present | v2.7.5 (README) | 3.3.1 |
-| z3 | present | 4.8.17 | 4.12.5 |
-| solc | present | 0.8.17 | 0.8.26 |
-| mo | present | — | ok |
-| node | present | 16.14 (images) | 24.11.1 |
-| docker | installed, daemon NOT running | — | — |
-| shellcheck | MISSING | — | — |
+| stack | present | v2.15+ (README) | 3.1.1 |
+| z3 | present | 4.12.5 | 4.12.5 ✓ |
+| solc | present | 0.8.26 | 0.8.26 ✓ |
+| mo | present but BROKEN under bash 3.2 | — | patched copy in session scratchpad |
+| node | present | 16.14 (images) | 24.x |
+| docker | present, daemon running | — | — |
+| shellcheck | present | — | — |
+| forge (Foundry) | present | — | 0.8.33 |
 | hadolint | MISSING | — | — |
 | ag | MISSING | — | — |
-| goal | MISSING (symlink scripts/goal-devnet) | — | — |
+| goal | MISSING (Docker-backed shim recipe in AGENTS.md) | — | — |
 
 ## Action Items
-- Install shellcheck, hadolint, ag: `brew install shellcheck hadolint the_silver_searcher`
-- Symlink `scripts/goal-devnet` as `goal` on PATH (or install go-algorand)
-- Reconcile solc/z3 versions with `DEPS` pins (relevant to the active `feat/solidity-update` branch)
-- Start Docker daemon before js/docs/image builds
-- Run `cd hs && make hs-build && make hs-test` once and update this baseline with pass/fail counts
+- Durable mo fix: `brew install bash` (mo's shebang is `env bash`; needs ≥4.4) or upgrade mo — until then every `make expand` on stock mo truncates Version.hs
+- Install hadolint, ag: `brew install hadolint the_silver_searcher`
+- Rebuild the Docker-backed `goal` shim (identical-path mounts + `-w "$PWD"`) before the next full `hs-test`
+- Exercise `cd js && make build` and `cd docs && make build` now that the Docker daemon is running
+- Decide whether to keep or delete `AGENTS.md.backup.1784773667` / `manifest.yml.backup.1784773667` (content now restored) and the untracked `AgenticEngineeringFramework/` checkout

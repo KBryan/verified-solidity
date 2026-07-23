@@ -1,4 +1,4 @@
-# CLAUDE.md — reach-lang
+# CLAUDE.md — verified-solidity
 
 > Project instructions for Claude Code. The full agent configuration lives in
 > [`AGENTS.md`](../AGENTS.md) (human-readable) and [`manifest.yml`](../manifest.yml)
@@ -7,11 +7,14 @@
 
 ## What this repo is
 
-Reach: a DSL and verifying compiler for decentralized applications. One `.rsh`
-program compiles to Solidity/EVM and Algorand TEAL contracts plus a JS frontend
-interface, with Z3-based formal verification on every compile. Monorepo:
-Haskell compiler in `hs/`, TypeScript runtime in `js/stdlib/`, docs in `docs/`,
-~255 example DApps in `examples/`.
+An independent continuation of Reach: a DSL and verifying compiler for
+decentralized applications, with a first-class verified-Solidity output mode.
+One `.rsh` program compiles to Solidity/EVM and Algorand TEAL contracts plus a
+JS frontend interface, with Z3-based formal verification on every compile;
+`reach sol` emits a verified `.sol` + ABI + verification report (or nothing, if
+verification fails). Monorepo: Haskell compiler in `hs/` (GHC 9.6.7,
+lts-22.44), TypeScript runtime in `js/stdlib/`, docs in `docs/`, ~255 example
+DApps in `examples/`.
 
 ## Key commands
 
@@ -22,7 +25,12 @@ cd hs && make hs-test         # golden tests; filter with HS_TEST_ARGS='-p <patt
 cd hs && make hs-test-accept  # accept new golden outputs after intentional changes
 cd hs && make hs-format       # ormolu, formats in place
 REACH_DOCKER=0 ./reach compile examples/argz/index.rsh   # compile an example locally
+REACH_DOCKER=0 ./reach sol examples/verified-solidity/index.rsh  # verified-Solidity mode
 ```
+
+`make expand` hazard: stock `mo` crashes under macOS bash 3.2 and leaves
+`hs/src/Reach/Version.hs` EMPTY (make then thinks it's up to date) — `rm` the
+target and rerun with a fixed mo. See AGENTS.md Known Issues.
 
 Docker daemon is required for `js/`, `docs/`, and image builds (`make`).
 
