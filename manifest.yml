@@ -56,7 +56,7 @@ components:
   examples:
     path: "examples/"
     entry: "examples/verified-solidity/index.rsh"
-    what: "~255 example DApps used as integration tests; examples/verified-solidity is the worked verified-Solidity example with a Foundry deploy test"
+    what: "~255 example DApps used as integration tests; examples/verified-solidity is the worked verified-Solidity example with a Foundry deploy test; examples/verified-solidity-interop shows hand-written companion Solidity verified via solc's SMTChecker"
   rpc-client:
     path: "rpc-client/"
     entry: "rpc-client/"
@@ -85,6 +85,8 @@ validation:
 run:
   compile-sol-example: "REACH_DOCKER=0 ./reach sol examples/verified-solidity/index.rsh"  # emits .sol + .abi.json + .verify.json into build/
   foundry-test: "examples/verified-solidity/foundry-test/run.sh"  # deploy test against the emitted .sol (forge installed)
+  compile-interop-example: "REACH_DOCKER=0 ./reach sol examples/verified-solidity-interop/index.rsh"  # companion Solidity (ContractCode) + SMTChecker; adds .companion.<Contract>.sol
+  foundry-test-interop: "examples/verified-solidity-interop/foundry-test/run.sh"
   compile-example: "REACH_DOCKER=0 ./reach compile examples/argz/index.rsh"
   docs-build: "cd docs && make build"     # Docker required
   docs-serve: "cd docs && make serve-up"  # serves at http://localhost:8080

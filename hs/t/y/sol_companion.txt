@@ -1,0 +1,8 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 6 theorems; No failures!
+Companion Solidity sol_companion_child.sol:Child: 2 proven, 0 violated, 0 unknown
+Artifacts: sol_companion.main.abi.json sol_companion.main.companion.Child.sol sol_companion.main.sol sol_companion.main.verify.json

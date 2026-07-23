@@ -12,6 +12,7 @@ where
 
 import Control.Monad
 import Data.IORef
+import Data.List (isPrefixOf)
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import qualified Data.Set as S
@@ -27,6 +28,7 @@ import Reach.BigOpt
 import Reach.CLike
 import Reach.Connector
 import Reach.Connector.ALGO
+import Reach.Connector.ETH_SolCheck
 import Reach.Connector.ETH_Solidity
 import Reach.EPP
 import Reach.EditorInfo
@@ -60,6 +62,8 @@ data CompilerConfig = CompilerConfig
   , ccVerifyFirstFailQuit :: Bool
   , ccSolOnly :: Bool
   , ccVerifyReport :: Bool
+  , ccCompanionCheck :: CompanionCheckLevel
+  , ccCompanionNoSolver :: Bool
   }
 
 all_connectors :: Connectors
@@ -100,11 +104,20 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
           Just c -> return $ M.singleton (conName c) c
           Nothing ->
             solDie "reachc: --sol requires the ETH connector, but this application's `connectors` option excludes ETH"
-  when ccSolOnly $
+  when ccSolOnly $ do
     forM_ ["sol", "abi.json", "verify.json", "sol.solc.json"] $ \l -> do
       let (_, fp) = ccOutput' True l
       e <- doesFileExist fp
       when e $ removeFile fp
+    -- Companion-source copies are named <src>.<app>.companion.<Contract>.sol;
+    -- remove stale ones from prior runs so failure leaves no artifacts behind.
+    let (_, solfp) = ccOutput' True "sol"
+    let bd = takeDirectory solfp
+    let pfx = takeBaseName solfp <> ".companion."
+    e <- doesDirectoryExist bd
+    when e $ do
+      fs <- listDirectory bd
+      forM_ (filter (pfx `isPrefixOf`) fs) $ \f -> removeFile $ bd </> f
   case ccStopAfterEval of
     True -> return mempty
     False -> do
@@ -261,12 +274,32 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
               True -> Just <$> newIORef emptyVerifyReportAccum
               False -> return Nothing
           ec <- verify (VerifyOpts {..}) p
+          -- Companion Solidity modules (ContractCode sources) were registered
+          -- and SMTChecked while this app was evaluated; drain them here.
+          companions0 <- solCheckTakeModules
+          let compLabel smr = "companion." <> smr_contract smr <> ".sol"
+          let compFp smr = snd $ ccOutput' True $ compLabel smr
+          let isSolSrc smr = takeExtension (smr_srcAbs smr) == ".sol"
+          let markArt smr =
+                case ccSolOnly && isSolSrc smr of
+                  True -> smr {smr_artifact = Just $ T.pack $ takeFileName $ compFp smr}
+                  False -> smr
+          let companions = map markArt companions0
+          forM_ companions $ putStrLn . solCheckSummary
+          let fatals =
+                concatMap
+                  (\smr -> map ((,) smr) $ solCheckFatalProps ccCompanionCheck ccSolOnly smr)
+                  companions
           forM_ vo_report $ \r -> do
             acc <- readIORef r
             let (_, vrf) = ccOutput' True "verify.json"
             writeVerifyReport vrf $
-              mkVerifyReport (T.pack ccSource) (T.pack outputFile) (ec == ExitSuccess) acc
+              mkVerifyReport (T.pack ccSource) (T.pack outputFile) (ec == ExitSuccess && null fatals) companions acc
           maybeDie ec
+          unless (null fatals) $ solDie $ solCheckFatalMsg fatals
+          when ccSolOnly $
+            forM_ (filter (isJust . smr_artifact) companions) $ \smr ->
+              copyFile (smr_srcAbs smr) (compFp smr)
       -- Once we know that we've passed the verification engine, we can
       -- remove variables that only occur in `assert` and `invariant`
       -- statements. The only hard part of this is noticing that some loop
@@ -411,6 +444,19 @@ printKeywordInfo = do
 -- command-line options.
 compile :: CompilerConfig -> IO ()
 compile (CompilerConfig {..}) = do
+  -- Companion analysis only runs when something consumes it: always at
+  -- `require`, and at `warn` only when a report is being emitted. Plain
+  -- compiles at the default level are byte-identical to before.
+  solCheckSetCfg $
+    SolCheckCfg
+      { scc_enabled =
+          case ccCompanionCheck of
+            CCL_Off -> False
+            CCL_Require -> True
+            CCL_Warn -> ccSolOnly || ccVerifyReport
+      , scc_timeout = ccVerifyTimeout
+      , scc_noSolver = ccCompanionNoSolver
+      }
   let source = ReachSourceFile ccSource
   let ccSourceRoot = takeBaseName ccSource
   let ccOutput' = wrapOutput (T.pack $ ccSourceRoot <> ".") ccOutput

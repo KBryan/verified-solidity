@@ -1,0 +1,19 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 4 theorems; No failures!
+Companion Solidity sol_companion_vfail_child.sol:Bad: 0 proven, 1 violated, 0 unknown
+reachc: companion Solidity verification failed:
+  sol_companion_vfail_child.sol: Assertion violation is violated at sol_companion_vfail_child.sol:8:5
+    CHC: Assertion violation happens here.
+    Counterexample:
+    
+    x = 42
+     = 0
+    
+    Transaction trace:
+    Bad.constructor()
+    Bad.f(42)
+Artifacts: sol_companion_vfail.main.verify.json

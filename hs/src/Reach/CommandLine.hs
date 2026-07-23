@@ -36,6 +36,8 @@ data CompilerOpts = CompilerOpts
   , co_verifyFirstFailQuit :: Bool
   , co_solOnly :: Bool
   , co_verifyReport :: Bool
+  , co_companionCheck :: Maybe String
+  , co_companionNoSolver :: Bool
   }
 
 newtype SupportToolArgs = SupportToolArgs {sta_so :: SupportOpts}
@@ -102,7 +104,15 @@ compiler =
                      <> help "Emit only verified Solidity + ABI + verification report; ETH connector only"))
            <*> (switch
                   (long "verify-report"
-                     <> help "Emit a machine-readable verification report (verify.json)")))
+                     <> help "Emit a machine-readable verification report (verify.json)"))
+           <*> (optional
+                  (strOption
+                     (long "companion-check"
+                        <> metavar "LEVEL"
+                        <> help "SMTChecker level for companion Solidity (ContractCode sources): require, warn, or off (default: warn; require with --sol)")))
+           <*> (switch
+                  (long "companion-check-no-solver"
+                     <> internal)))
 
 getCompilerArgs :: String -> IO CompilerToolArgs
 getCompilerArgs versionCliDisp = do

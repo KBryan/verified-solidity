@@ -31,6 +31,7 @@ import Reach.AST.CL
 import Reach.AST.DLBase
 import Reach.CLike
 import Reach.Connector
+import Reach.Connector.ETH_SolCheck
 import Reach.Connector.ETH_solc
 import Reach.Counter
 import Reach.EmbeddedFiles
@@ -1910,17 +1911,24 @@ ccJson x y z = do
 ccSol :: String -> FilePath -> CCApp String
 ccSol cn solf = do
   CompiledSolRec {..} <- ExceptT (compile_sol_ solf cn)
+  -- Companion analysis (solc SMTChecker) for verify.json; a no-op unless the
+  -- compile consumes a verification report.
+  liftIO $ solCheckRegisterSol solf cn
   return $ T.unpack csrCode
 
 ccPath :: String -> CCApp String
 ccPath fp = do
   case splitOn ":" fp of
     [x]
-      | takeExtension x == ".bin" ->
-        ccBin <$> ccRead x
+      | takeExtension x == ".bin" -> do
+        r <- ccBin <$> ccRead x
+        liftIO $ solCheckRegisterOpaque x Nothing
+        return r
     [x, y, cn]
-      | takeExtension x == ".json" ->
-        ccJson y cn =<< ccRead x
+      | takeExtension x == ".json" -> do
+        r <- ccJson y cn =<< ccRead x
+        liftIO $ solCheckRegisterOpaque x $ Just cn
+        return r
     [x, cn]
       | takeExtension x == ".sol" ->
         ccSol cn x
