@@ -1,0 +1,31 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  msg: "balance zero at application exit"
+  at ./token_track_api_call_zero_bal.rsh:22:7:application
+
+  // Violation Witness
+
+  const UInt.max = 1;
+
+
+  // Theorem Formalization
+
+  const tokInfos/71 = array(Tuple(UInt, UInt, Bool), [[0, 0, false ] ]);
+  //    ^ would be Array.const(Tuple(UInt, UInt, Bool), [0, 0, false ] )
+  const tokInfos'/95 = Array.set(tokInfos/71, 0, Tuple.set(tokInfos/71[0], 0, 0 ) );
+  //    ^ would be Array.const(Tuple(UInt, UInt, Bool), [0, 0, false ] )
+  const tokInfo/100 = tokInfos'/95[0];
+  //    ^ would be [0, 0, false ]
+  const v115 = 0 == Array.set(tokInfos'/95, 0, Tuple.set(tokInfo/100, 0, (tokInfo/100[0] + 1) ) )[0][0];
+  //    ^ would be false
+  assert(v115);
+
+  Verifying when NO participants are honest
+Checked 13 theorems; 2 failures (and 1 omitted repeats) :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

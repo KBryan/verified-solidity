@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verification failed:
+  of theorem unknowable("Bob", handAlice/87)
+  at ./index-fails.rsh:27:13:application
+
+  Bob knows of handAlice/87 because it is published.
+
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 11 theorems; 1 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

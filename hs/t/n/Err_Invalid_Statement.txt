@@ -1,0 +1,8 @@
+reachc: error[RE0093]: Effects cannot be bound, got: <SLV_Form>
+
+  ./Err_Invalid_Statement.rsh:195:30:id
+
+  
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0093
+

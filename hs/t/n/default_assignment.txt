@@ -1,0 +1,8 @@
+reachc: error[RP0012]: Unexpected token: SimpleAssignToken
+
+  ./default_assignment.rsh:8:21
+
+  8|       const {a: { b = 5 }} = { a: {} };
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RP0012
+

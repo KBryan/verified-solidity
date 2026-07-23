@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 16 theorems; No failures!
+reachc: error[RAPI0003]: API "C_f" does not always return result in same consensus step
+
+  ./API_NoOut2.rsh:14:7:application
+
+  14|   .api( C.f, (apiReturn) => {
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RAPI0003
+

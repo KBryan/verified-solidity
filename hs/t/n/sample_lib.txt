@@ -1,0 +1,15 @@
+Compiling `default`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  at ./sample_lib.rsh:9:7:application
+
+  assert(false);
+
+  Verifying when NO participants are honest
+Checked 2 theorems; 2 failures (and 1 omitted repeats) :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

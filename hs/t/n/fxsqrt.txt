@@ -1,0 +1,11 @@
+reachc: error[RE0000]: Invalid function application. Expected 1 args, got 2 for function defined at reach standard library:323:27:function exp
+
+  ./fxsqrt.rsh:10:30:application
+
+  10|         interact.show( fxsqrt( fx(1)(Neg, 9) , 10 ) );
+
+Trace:
+  in [unknown function] from (./fxsqrt.rsh:9:17:function exp) at (./fxsqrt.rsh:9:13:application)
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0000
+

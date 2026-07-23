@@ -1,0 +1,15 @@
+devnet-eth:
+  image:          reachsh/devnet-eth:${REACH_VERSION}
+  hostname:       reach-devnet-eth
+  container_name: reach-devnet-eth
+  networks:
+    - ${NETWORK}
+  ports:
+    ${PORTS}
+  labels:
+    ${LABELS}
+  environment:
+    - REACH_VERSION=${REACH_VERSION}
+    - REACHC_ID
+    - REACH_CONNECTOR_MODE=ETH-devnet
+    - REACH_DISABLE_REPORTING

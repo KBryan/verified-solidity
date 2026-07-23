@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 4 theorems; No failures!
+warning[RW0004]: There are no publications in the application.
+
+  ./default_fn_argument.rsh:9:12:application
+
+  9|   Reach.App(
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0004
+

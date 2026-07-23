@@ -1,0 +1,8 @@
+reachc: error[RP0012]: Unexpected token: GtToken
+
+  ./pipeline_operator.rsh:12:10
+
+  12|       5 |> double |> Array.iota;
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RP0012
+

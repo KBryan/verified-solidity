@@ -1,0 +1,18 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "reach:lib"
+    - path: "./reach-everest/hs/src"
+      component: "reach:lib"
+    - path: "./test"
+      component: "reach:reach-test"
+    - path: "./app/reachc"
+      component: "reach:exe:reachc"
+    - path: "./app/reach-id-client"
+      component: "reach:exe:reach-id-client"
+    - path: "./app/reach"
+      component: "reach:exe:reach"
+    - path: "./app/reach-cli"
+      component: "reach:exe:reach-cli"
+    - path: "./app/reachpc"
+      component: "reach:exe:reachpc"

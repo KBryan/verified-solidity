@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 5 theorems; No failures!
+reachc: error[RAPI0004]: API "f" refers to non-consensus state: [x/64 from ./API_NonCS.rsh:12:24:id]
+
+  ./API_NonCS.rsh:3:30:application
+
+  3| export const main = Reach.App(() => {
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RAPI0004
+

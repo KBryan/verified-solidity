@@ -1,0 +1,34 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  at ./assert_gt.rsh:8:13:application
+  at ./assert_gt.rsh:5:11:application call to [unknown function] (defined at: ./assert_gt.rsh:5:15:function exp)
+
+  // Violation Witness
+
+  const _x/36 = protect<UInt>("A".interact.getX());
+  //    ^ could = 0
+  //      from: ./assert_gt.rsh:6:31:application
+
+  // Theorem Formalization
+
+  const v37 = _x/36 > 0;
+  //    ^ would be false
+  assert(v37);
+
+  Verifying when NO participants are honest
+Checked 2 theorems; 1 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures
+warning[RW0004]: There are no publications in the application.
+
+  ./assert_gt.rsh:3:30:application
+
+  3| export const main = Reach.App(
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0004
+

@@ -1,0 +1,53 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  msg: "Token in pay amount is unique"
+  at ./nonunique_payamt.rsh:23:5:dot
+
+  // Violation Witness
+
+  const condish/194 = "A".interact.condish;
+  //    ^ could = false
+  //      from: ./nonunique_payamt.rsh:6:12:property binding
+  const tokens/195 = "A".interact.tokens;
+  //    ^ could = array(Token, [Token!val!0 ] )
+  //      from: ./nonunique_payamt.rsh:5:11:property binding
+
+  // Theorem Formalization
+
+  const v236 = ((tokens/195[1] == array(Token, [(condish/194 ? tokens/195[0] : tokens/195[1]) ])[0]) ? false : true);
+  //    ^ would be false
+  assert(v236);
+
+  Verifying when NO participants are honest
+Verification failed:
+  when NO participants are honest
+  of theorem: assert
+  msg: "Token in pay amount is unique"
+  at ./nonunique_payamt.rsh:23:5:dot
+
+  // Violation Witness
+
+  const token1/209 = <a publication>;
+  //    ^ could = Token!val!0
+  //      from: ./nonunique_payamt.rsh:17:5:dot
+  const token2/210 = <a publication>;
+  //    ^ could = Token!val!1
+  //      from: ./nonunique_payamt.rsh:17:5:dot
+  const condish/211 = <a publication>;
+  //    ^ could = false
+  //      from: ./nonunique_payamt.rsh:17:5:dot
+
+  // Theorem Formalization
+
+  const v248 = ((token2/210 == array(Token, [(condish/211 ? token1/209 : token2/210) ])[0]) ? false : true);
+  //    ^ would be false
+  assert(v248);
+
+Checked 27 theorems; 2 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

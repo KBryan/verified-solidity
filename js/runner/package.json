@@ -1,0 +1,9 @@
+{
+  "name": "@reach-sh/untitled-reach-app-1",
+  "type": "module",
+  "author": "reach.sh",
+  "license": "Apache-2.0",
+  "scripts": {
+    "app": "node --experimental-modules --unhandled-rejections=strict index.mjs"
+  }
+}

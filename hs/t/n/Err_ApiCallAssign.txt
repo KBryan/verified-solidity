@@ -1,0 +1,8 @@
+reachc: error[RE0094]: unused variable: k1 at ./Err_ApiCallAssign.rsh:15:9:id
+
+  ./Err_ApiCallAssign.rsh:15:9:id
+
+  15|   const k1 =
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0094
+

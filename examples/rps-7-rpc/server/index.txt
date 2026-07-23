@@ -1,0 +1,38 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 81 theorems; No failures!
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./index.rsh:76:19:application
+
+  76|           .timeout(DEADLINE, () => closeTo(B, informTimeout));
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./index.rsh:70:19:application
+
+  70|           .timeout(DEADLINE, () => closeTo(A, informTimeout));
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./index.rsh:63:19:application
+
+  63|           .timeout(DEADLINE, () => closeTo(B, informTimeout));
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./index.rsh:51:17:application
+
+  51|         .timeout(DEADLINE, () => closeTo(A, informTimeout));
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+

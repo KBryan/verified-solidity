@@ -1,0 +1,47 @@
+{
+  "name": "reach-react-app",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@perawallet/connect": "^1.0.7",
+    "algosdk": "^1.23.2",
+    "@randlabs/myalgo-connect": "^1.4.1",
+    "@walletconnect/client": "^1.8.0",
+    "algorand-walletconnect-qrcode-modal": "^1.8.0",
+    "ethers": "^5.7.2",
+    "await-timeout": "^0.6.0",
+    "crypto-browserify": "^3.12.0",
+    "express": "^4.17.3",
+    "hi-base32": "^0.5.1",
+    "jsbi": "^3.1.6",
+    "superagent": "^8.0.3",
+    "node-fetch": "^2.6.1",
+    "nth-check": "^2.0.1",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "react": "^18.2.0",
+    "react-app-rewired": "^2.2.1",
+    "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "url-parse": "^1.5.10",
+    "wait-port": "^0.2.9",
+    "webpack": "^5.74.0"
+  },
+  "scripts": {
+    "start": "DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false react-app-rewired --max_old_space_size=4096 start"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

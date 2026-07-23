@@ -1,0 +1,8 @@
+reachc: error[RE0085]: Value cannot exist at runtime: A's interaction interface
+
+  ./interact_escape_only.rsh:11:7:dot
+
+  11|     A.publish(aInteract);
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0085
+

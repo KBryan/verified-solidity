@@ -1,0 +1,6 @@
+Compiling `default`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 1 theorems; No failures!

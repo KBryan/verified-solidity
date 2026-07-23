@@ -1,0 +1,13 @@
+reachc: error[RE0088]: These types are mismatched:
+  expected: UInt from reach standard library:35:14:return
+       got: Tuple(UInt, Token) from reach standard library:36:14:return
+
+  reach standard library:33:49:block app
+
+  
+
+Trace:
+  in "maybe" from (reach standard library:40:34:function exp) at (./Err_InspectAbstractToken.rsh:15:16:application)
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0088
+

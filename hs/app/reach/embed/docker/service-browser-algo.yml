@@ -1,0 +1,13 @@
+devnet-algo:
+  image:          reachsh/devnet-algo:${REACH_VERSION}
+  hostname:       reach-devnet-algo
+  container_name: reach-devnet-algo
+  networks:
+    - ${NETWORK}
+  ports:
+    ${PORTS}
+  labels:
+    ${LABELS}
+  environment:
+    - REACH_DEBUG
+    - REACH_NO_WARN

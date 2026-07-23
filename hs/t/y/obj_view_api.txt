@@ -1,0 +1,30 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 7 theorems; No failures!
+warning[RW0005]: The `Object` type's format is controlled by Reach; you may want to use `Struct` instead for external interfaces, so you can mandate and document the format.
+
+  ./obj_view_api.rsh:7:17:application
+
+  7|   const V = View({ o1: Object({ a1: UInt }) });
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0005
+
+warning[RW0005]: The `Object` type's format is controlled by Reach; you may want to use `Struct` instead for external interfaces, so you can mandate and document the format.
+
+  ./obj_view_api.rsh:8:16:application
+
+  8|   const A = API({ o2: Fun([Array(Object({ a2: UInt }), 2)], Null) });
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0005
+
+warning[RW0005]: The `Object` type's format is controlled by Reach; you may want to use `Struct` instead for external interfaces, so you can mandate and document the format.
+
+  ./obj_view_api.rsh:9:16:application
+
+  9|   const B = API({ o3: Fun([], D) });
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0005
+

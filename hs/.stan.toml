@@ -1,0 +1,82 @@
+# Checks ignored from most severe (top of file) to least severe (bottom of file)
+
+# Big tuples
+[[check]]
+type = "Exclude"
+id = "STAN-0302"
+scope = "all"
+
+# Anti-pattern: Pattern matching on '_'
+[[check]]
+type = "Exclude"
+id = "STAN-0213"
+scope = "all"
+
+# Infinite: base/length, base/reverse, base/sum
+[[check]]
+type = "Exclude"
+category = "Infinite"
+scope = "all"
+
+# TODO use bytestring instead of text? meh...
+# why doesn't Data.Text include a O(1) fn for utf8 byte length?
+[[check]]
+type = "Exclude"
+id = "STAN-0208"
+scope = "all"
+
+# Stan thinks $(embedFile) is bad because it splices in unsafePerformIO
+# https://github.com/kowainik/stan/issues/356
+# Anti-pattern: unsafe functions
+[[check]]
+type = "Exclude"
+id = "STAN-0212"
+file = "src/Reach/EmbeddedFiles.hs"
+
+[[check]]
+type = "Exclude"
+id = "STAN-0212"
+file = "app/gen-reach/GenReach/EmbeddedFiles.hs"
+
+# We carefully use unsafePerformIO in this module
+[[check]]
+type = "Exclude"
+id = "STAN-0212"
+file = "src/Reach/UnsafeUtil.hs"
+
+# We export `nub`, which is inefficient
+[[check]]
+type = "Exclude"
+id = "STAN-0209"
+file = "src/Reach/UnsafeUtil.hs"
+
+# We carefully use unsafePerformIO in this module
+[[check]]
+type = "Exclude"
+id = "STAN-0212"
+file = "src/Reach/AnalyzeVars.hs"
+
+# We carefully use unsafePerformIO in this module
+[[check]]
+type = "Exclude"
+id = "STAN-0212"
+file = "src/Reach/Report/UnsafeGlobals.hs"
+
+# Usage of 'for_' or 'forM_' on numerical ranges is slow
+# but it's not that bad
+[[check]]
+type = "Exclude"
+id = "STAN-0210"
+file = "src/Reach/Connector/ALGO.hs"
+
+# TODO use safer things
+# Partial: base/toEnum, base/maximum
+[[check]]
+type = "Exclude"
+category = "Partial"
+file = "src/Reach/Connector/ALGO.hs"
+
+[[check]]
+type = "Exclude"
+id = "STAN-0013"
+file = "app/reach/Main.hs"

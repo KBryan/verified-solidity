@@ -1,0 +1,28 @@
+{
+  "name": "@reach-sh/simulator-client",
+  "description": "client for the Reach Simulator",
+  "version": "0.0.52",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reach-sh/reach-lang.git",
+    "directory": "simulator-client"
+  },
+  "type": "module",
+  "dependencies": {
+    "net": "^1.0.2",
+    "node-fetch": "3.2.3",
+    "wait-port": "0.2.9"
+  },
+  "author": "reach.sh",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/reach-sh/reach-lang/issues"
+  },
+  "homepage": "https://github.com/reach-sh/reach-lang#readme",
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc"
+  }
+}

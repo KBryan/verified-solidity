@@ -1,0 +1,19 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verification failed:
+  of theorem unknowable("Bob", x/41)
+  at ./unknowable2.rsh:22:17:application
+
+  Bob could learn of x/41 via z/48.
+
+  z/48 was published at ./unknowable2.rsh:19:9:dot
+  ^ which contains info about z/46 (defined at ./unknowable2.rsh:17:15:id)
+  ^ which contains info about y/45 (defined at ./unknowable2.rsh:15:15:id)
+  ^ which contains info about x/41 (defined at ./unknowable2.rsh:14:15:id)
+
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 4 theorems; 1 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

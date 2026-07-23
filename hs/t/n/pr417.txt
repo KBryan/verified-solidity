@@ -1,0 +1,72 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  msg: "balance zero at application exit"
+  at ./pr417.rsh:30:7:application
+
+  // Violation Witness
+
+  const UInt.max = 20;
+
+  const data_id/292 = <switch case binding for T(10 )>;
+  //    ^ could = 10
+  //      from: ./pr417.rsh:18:12:switch
+
+  // Theorem Formalization
+
+  const v359 = 0 == ((10 + data_id/292) - 10);
+  //    ^ would be false
+  assert(v359);
+
+  Verifying when NO participants are honest
+Verification failed:
+  when NO participants are honest
+  of theorem: assert
+  msg: "balance zero at application exit"
+  at ./pr417.rsh:30:7:application
+
+  assert(false);
+
+Verification failed:
+  when NO participants are honest
+  of theorem: assert
+  msg: "balance zero at application exit"
+  at ./pr417.rsh:30:7:application
+
+  // Violation Witness
+
+  const UInt.max = 20;
+
+  const tok/191 = <a publication>;
+  //    ^ could = Token!val!1
+  //      from: ./pr417.rsh:10:5:dot
+
+  // Theorem Formalization
+
+  const tokInfos/183 = array(Tuple(UInt, UInt, Bool), [[0, 0, false ] ]);
+  //    ^ would be Array.const(Tuple(UInt, UInt, Bool), [0, 0, false ] )
+  const tokInfos'/196 = Array.set(tokInfos/183, 0, Tuple.set(tokInfos/183[0], 0, 0 ) );
+  //    ^ would be Array.const(Tuple(UInt, UInt, Bool), [0, 0, false ] )
+  const tokInfo/203 = tokInfos'/196[0];
+  //    ^ would be [0, 0, false ]
+  const tokInfos'/208 = Array.set(tokInfos'/196, 0, Tuple.set(tokInfo/203, 0, (tokInfo/203[0] + 10) ) );
+  //    ^ would be array(Tuple(UInt, UInt, Bool), [[10, 0, false ] ] )
+  const tokIdx/317 = ((Array.set(array(Token, [Token.zero ]), 0, tok/191 )[0] == tok/191) ? [true, 0 ] : [false, 1 ])[1];
+  //    ^ would be 0
+  const tokInfo/319 = tokInfos'/208[tokIdx/317];
+  //    ^ would be [10, 0, false ]
+  const tokInfos'/339 = Array.set(tokInfos'/208, tokIdx/317, Tuple.set(tokInfo/319, 0, (tokInfo/319[0] + 10) ) );
+  //    ^ would be array(Tuple(UInt, UInt, Bool), [[20, 0, false ] ] )
+  const tokInfo/349 = tokInfos'/339[0];
+  //    ^ would be [20, 0, false ]
+  const v362 = 0 == Array.set(tokInfos'/339, 0, Tuple.set(tokInfo/349, 0, (tokInfo/349[0] - 10) ) )[0][0];
+  //    ^ would be false
+  assert(v362);
+
+Checked 37 theorems; 4 failures (and 1 omitted repeats) :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

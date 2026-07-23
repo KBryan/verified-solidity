@@ -1,0 +1,52 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: while invariant after loop
+  at ./loop_var_sub.rsh:13:17:invariant
+
+  // Violation Witness
+
+  const UInt.max = 2;
+
+  const x/62 = <loop variable>;
+  //    ^ could = [0, false ]
+  //      from: ./loop_var_sub.rsh:14:7:while
+  const netBalance/66 = <loop variable>;
+  //    ^ could = 0
+  //      from: ./loop_var_sub.rsh:14:7:while
+
+  // Theorem Formalization
+
+  const v100 = (netBalance/66 + 1) == [(x/62[0] + 2), x/62[1] ][0];
+  //    ^ would be false
+  assert(v100);
+
+  Verifying when NO participants are honest
+Verification failed:
+  when NO participants are honest
+  of theorem: while invariant after loop
+  at ./loop_var_sub.rsh:13:17:invariant
+
+  // Violation Witness
+
+  const UInt.max = 2;
+
+  const x/62 = <loop variable>;
+  //    ^ could = [0, false ]
+  //      from: ./loop_var_sub.rsh:14:7:while
+  const netBalance/66 = <loop variable>;
+  //    ^ could = 0
+  //      from: ./loop_var_sub.rsh:14:7:while
+
+  // Theorem Formalization
+
+  const v119 = (netBalance/66 + 1) == [(x/62[0] + 2), x/62[1] ][0];
+  //    ^ would be false
+  assert(v119);
+
+Checked 10 theorems; 2 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

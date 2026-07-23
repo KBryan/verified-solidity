@@ -1,0 +1,77 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: while invariant after loop
+  msg: "howMany accurate"
+  at ./index-fail.rsh:35:17:invariant
+
+  // Violation Witness
+
+  const UInt.max = 2;
+
+  const howMany/739 = <loop variable>;
+  //    ^ could = 1
+  //      from: ./index-fail.rsh:34:19:while
+  const v1121 = <map reduction>;
+  //    ^ could = 1
+  //      from: reach standard library:170:21:application
+
+  // Theorem Formalization
+
+  const v1129 = v1121 == (howMany/739 - 1);
+  //    ^ would be false
+  assert(v1129);
+
+  Verifying when NO participants are honest
+Verification failed:
+  when NO participants are honest
+  of theorem: while invariant after loop
+  msg: "howMany accurate"
+  at ./index-fail.rsh:35:17:invariant
+
+  // Violation Witness
+
+  const UInt.max = 1;
+
+  const howMany/739 = <loop variable>;
+  //    ^ could = 1
+  //      from: ./index-fail.rsh:34:19:while
+  const v1213 = <map reduction>;
+  //    ^ could = 1
+  //      from: reach standard library:170:21:application
+
+  // Theorem Formalization
+
+  const v1221 = v1213 == (howMany/739 - 1);
+  //    ^ would be false
+  assert(v1221);
+
+Verification failed:
+  when NO participants are honest
+  of theorem: while invariant after loop
+  msg: "howMany accurate"
+  at ./index-fail.rsh:35:17:invariant
+
+  // Violation Witness
+
+  const UInt.max = 1;
+
+  const howMany/739 = <loop variable>;
+  //    ^ could = 1
+  //      from: ./index-fail.rsh:34:19:while
+  const v1294 = <map reduction>;
+  //    ^ could = 1
+  //      from: reach standard library:170:21:application
+
+  // Theorem Formalization
+
+  const v1302 = v1294 == (howMany/739 - 1);
+  //    ^ would be false
+  assert(v1302);
+
+Checked 48 theorems; 3 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

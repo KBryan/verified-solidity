@@ -1,0 +1,5 @@
+# These are allowed to timeout and we still release
+
+# https://reachsh.atlassian.net/browse/CORE-463
+ETH.cache-events
+

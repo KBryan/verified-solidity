@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 17 theorems; No failures!
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./publish_throwTimeout.rsh:27:31:application
+
+  27|         A.pay(10).throwTimeout(10, 5);
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+

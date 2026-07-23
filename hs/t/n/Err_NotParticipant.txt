@@ -1,0 +1,8 @@
+reachc: error[RE0063]: Expected a participant as an argument, instead got Bool
+
+  ./Err_NotParticipant.rsh:9:15:application
+
+  9|     unknowable(false, A(_x));
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0063
+

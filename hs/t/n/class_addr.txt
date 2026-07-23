@@ -1,0 +1,28 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: require
+  at ./class_addr.rsh:20:14:application
+
+  // Violation Witness
+
+  const v53 = selfAddress("C", True, 23 )();
+  //    ^ could = <abstract address 0>
+  //      from: ./class_addr.rsh:12:13:application
+  const v59 = selfAddress("C", True, 31 )();
+  //    ^ could = <abstract address 1>
+  //      from: ./class_addr.rsh:17:13:application
+
+  // Theorem Formalization
+
+  const v65 = v53 == v59;
+  //    ^ would be false
+  require(v65);
+
+  Verifying when NO participants are honest
+Checked 8 theorems; 1 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

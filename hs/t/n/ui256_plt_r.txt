@@ -1,0 +1,10 @@
+reachc: error[RE0088]: These types are mismatched:
+  expected: UInt from definition
+       got: UInt256 from ./ui256_plt_r.rsh:11:5:dot
+
+  ./ui256_plt_r.rsh:12:15:application
+
+  12|   const y = 5 < x;
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0088
+

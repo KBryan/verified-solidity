@@ -1,0 +1,39 @@
+{
+  "alloc": [
+    {
+      "addr": "7777777777777777777777777777777777777777777777777774MSJUVU",
+      "comment": "RewardsPool",
+      "state": {
+        "algo": 125000000000000,
+        "onl": 2
+      }
+    },
+    {
+      "addr": "A7NMWS3NT3IUDMLVO26ULGXGIIOUQ3ND2TXSER6EBGRZNOBOUIQXHIBGDE",
+      "comment": "FeeSink",
+      "state": {
+        "algo": 100000,
+        "onl": 2
+      }
+    },
+    {
+      "addr": "L6RQNTIK4VOGOM4YI6JIHXUZACZVBBOJODSMFCJYYPEBIK25TNGXYMLJGA",
+      "comment": "FAUCET",
+      "state": {
+        "algo": 10000000000000000,
+        "onl": 1,
+        "sel": "9XFYdY2Jre156XB1vAaX0qTIJuv4FnO0JxwLtBnGpXk=",
+        "stprf": "s0HkXnumwWPiHLEWjlNi2Yraq0KXMh1CUVIX4zRt9fYQXKlx8YBcbZFfvO6qh7j5XUvOaseCtAOUgldayVGFXA==",
+        "vote": "YP1x8edvbbDpnV9+fPINXtbDmzNuOTX0zajUBCkl3rk=",
+        "voteKD": 10000,
+        "voteLst": 3000000
+      }
+    }
+  ],
+  "devmode": true,
+  "fees": "A7NMWS3NT3IUDMLVO26ULGXGIIOUQ3ND2TXSER6EBGRZNOBOUIQXHIBGDE",
+  "id": "v1",
+  "network": "devnet",
+  "proto": "https://github.com/algorandfoundation/specs/tree/44fa607d6051730f5264526bf3c108d51f0eadb6",
+  "rwd": "7777777777777777777777777777777777777777777777777774MSJUVU"
+}

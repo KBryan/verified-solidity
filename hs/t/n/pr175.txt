@@ -1,0 +1,23 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  at ./pr175.rsh:9:9:application
+
+  assert(false);
+
+  Verifying when NO participants are honest
+Checked 3 theorems; 2 failures (and 1 omitted repeats) :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures
+warning[RW0004]: There are no publications in the application.
+
+  ./pr175.rsh:2:30:application
+
+  2| export const main = Reach.App(() => {
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0004
+

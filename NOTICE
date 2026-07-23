@@ -1,0 +1,9 @@
+verified-solidity
+
+This project is an independent continuation of the Reach language and
+verifying compiler, originally developed by Reach (reach-sh) and published
+at https://github.com/reach-sh/reach-lang under the Apache License 2.0.
+
+Copyright for the original work belongs to its authors; see LICENSE.
+Modifications and continued development in this repository:
+Copyright the verified-solidity contributors.

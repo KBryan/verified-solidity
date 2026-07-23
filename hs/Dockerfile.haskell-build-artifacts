@@ -1,0 +1,76 @@
+ARG SOLC_IMAGE
+ARG ALPINE_IMAGE
+FROM $SOLC_IMAGE AS solc
+RUN apk add make curl bash
+COPY .docker-root ./.docker-root
+COPY Makefile.docker ./Makefile
+COPY sol/stdlib_reach.sol sol/stdlib_openzep.sol.sh ./sol/
+RUN make ROOT=.docker-root sol/stdlib.json
+
+FROM reachsh/devnet-algo:latest AS algo
+
+FROM $ALPINE_IMAGE as z3
+ARG Z3_VERSION
+ENV Z3_VERSION=${Z3_VERSION}
+RUN apk update && apk add git cmake python3 make gcc g++
+RUN wget https://github.com/Z3Prover/z3/archive/refs/tags/z3-${Z3_VERSION}.tar.gz && \
+    tar -xzf z3-${Z3_VERSION}.tar.gz && \
+    cd z3-z3-${Z3_VERSION} && \
+    mkdir build
+WORKDIR z3-z3-${Z3_VERSION}
+RUN cmake -B build \
+		-DZ3_BUILD_PYTHON_BINDINGS=True \
+		-DZ3_INSTALL_PYTHON_BINDINGS=True \
+		-DPYTHON_EXECUTABLE=/usr/bin/python3 \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DBUILD_SHARED_LIBS=True \
+		-DCMAKE_BUILD_TYPE=Release
+RUN	cmake --build build && cmake --install build
+
+FROM $ALPINE_IMAGE
+RUN apk update
+RUN apk add ncurses ncurses-dev libc6-compat zlib-dev gcc g++ git gmp-dev
+RUN ln -s /lib64/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2
+RUN ln -s /usr/lib/libncursesw.so.6 /usr/lib/libtinfo.so.6
+RUN ln -s /usr/lib/libtinfo.so.6 /usr/lib/libtinfo.so
+RUN wget -qO- https://get.haskellstack.org/ | sh
+
+WORKDIR /build
+
+RUN apk add make curl bash
+COPY .docker-root ./.docker-root
+COPY Makefile.docker ./Makefile
+RUN make ROOT=.docker-root install-mo
+COPY package.open.yaml ./
+RUN make ROOT=.docker-root package.yaml
+
+COPY stack.yaml stack.yaml.lock ./
+RUN stack build --dependencies-only
+
+# Make the package.yaml twice so that we share more build cache
+COPY package.closed.yaml ./
+RUN make ROOT=.docker-root package.yaml
+
+COPY hie.yaml Setup.hs ./
+ADD app ./app/
+ADD app-closed ./app-closed/
+ADD rsh ./rsh/
+ADD smt2 ./smt2/
+COPY --from=solc /sol/stdlib.sol ./sol/
+ADD src ./src/
+ADD test ./test/
+
+RUN make ROOT=.docker-root src/Reach/Version.hs
+
+ARG REACH_HS_STACK_ARGS
+ENV REACH_HS_STACK_ARGS=${REACH_HS_STACK_ARGS}
+RUN set -o pipefail ; stack build ${REACH_HS_STACK_ARGS} 2>&1 | tee build-log.txt
+RUN mv "$(stack path --local-install-root)/bin" /build/bin/
+
+COPY --from=solc /usr/local/bin/solc /usr/bin/solc
+COPY --from=solc /sol/stdlib.json .
+COPY --from=z3 /usr/bin/z3 /usr/bin/z3
+COPY --from=algo /bin/goal /usr/bin/goal
+
+COPY .stan.toml ./

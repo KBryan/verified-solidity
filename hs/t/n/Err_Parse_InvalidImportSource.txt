@@ -1,0 +1,11 @@
+reachc: error[RI0004]: Invalid import: @bork
+(line 1, column 6):
+unexpected end of input
+expecting "/" or valid git account character (alphanumeric, -, _, .)
+
+  ./Err_Parse_InvalidImportSource.rsh:3:8:import bare
+
+  3| import '@bork';
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RI0004
+

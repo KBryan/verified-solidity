@@ -1,0 +1,16 @@
+warning[RW0000]: Declaring Participants with a tuple is now deprecated. Please use `Participant(name, interface)` or `ParticipantClass(name, interface)`.
+
+  ./pay_multiple_currency.rsh:12:7:tuple
+
+  12|       ['A', { amts: Array(UInt, N), shouldPay: Fun([], Bool) }],
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+
+reachc: error[RE0056]: Invalid name shadowing. Identifier 'amtIns' is already bound at ./pay_multiple_currency.rsh:28:26:id. It cannot be bound again at ./pay_multiple_currency.rsh:24:21:id
+
+  ./pay_multiple_currency.rsh:32:30:application
+
+  32|           .case(A, publishE, payE, consensusE)
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0056
+

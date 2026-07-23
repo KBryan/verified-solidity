@@ -1,0 +1,16 @@
+ARG ALPINE_IMAGE
+FROM reachsh/haskell-build-artifacts-open as build
+
+FROM $ALPINE_IMAGE
+
+RUN apk update && apk add libc6-compat gmp-dev
+RUN ln -s /lib64/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2
+
+COPY --from=build /build/bin/reach /usr/bin/reach
+COPY app/reach/embed/ /app/embed/
+
+WORKDIR /app/src
+ENTRYPOINT ["/usr/bin/reach"]
+
+ARG REACH_GIT_HASH
+ENV REACH_GIT_HASH="${REACH_GIT_HASH}"

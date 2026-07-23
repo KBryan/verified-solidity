@@ -1,0 +1,24 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: assert
+  at ./j610.rsh:8:11:application
+  at ./j610.rsh:7:9:application call to [unknown function] (defined at: ./j610.rsh:7:13:function exp)
+
+  // Violation Witness
+
+  const didPublish/22 = <a publication>;
+  //    ^ could = false
+  //      from: ./j610.rsh:6:5:dot
+
+  // Theorem Formalization
+
+  assert(didPublish/22);
+
+  Verifying when NO participants are honest
+Checked 4 theorems; 1 failures :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures

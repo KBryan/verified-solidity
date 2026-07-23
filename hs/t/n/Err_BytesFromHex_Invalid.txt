@@ -1,0 +1,8 @@
+reachc: error[RE0139]: Bytes.fromHex received a string that does not contain valid hex characters
+
+  ./Err_BytesFromHex_Invalid.rsh:4:26:application
+
+  4|   const x = Bytes.fromHex('0xt');
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0139
+

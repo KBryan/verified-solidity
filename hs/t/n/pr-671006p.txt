@@ -1,0 +1,41 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+Verification failed:
+  when ALL participants are honest
+  of theorem: while invariant before loop
+  at ./pr-671006p.rsh:52:15:invariant
+
+  // Violation Witness
+
+  const UInt.max = 1;
+
+  const sum/188 = <loop variable>;
+  //    ^ could = 0
+  //      from: ./pr-671006p.rsh:31:37:while
+  const netBalance/192 = <loop variable>;
+  //    ^ could = 0
+  //      from: ./pr-671006p.rsh:31:37:while
+  const v241 = <map reduction>;
+  //    ^ could = 1
+  //      from: reach standard library:147:18:application
+
+  // Theorem Formalization
+
+  const v250 = ((netBalance/192 == sum/188) ? (sum/188 == v241) : false);
+  //    ^ would be false
+  assert(v250);
+
+  Verifying when NO participants are honest
+Checked 30 theorems; 2 failures (and 1 omitted repeats) :'(
+
+For a guide to understanding verification failures, see: https://docs.reach.sh/rsh/errors/#how-to-read-verification-failures
+warning[RW0000]: Using a bare value as a time argument is now deprecated. Please use relativeTime, absoluteTime, relativeSecs, or absoluteSecs.
+
+  ./pr-671006p.rsh:45:13:application
+
+  45|     .timeout(p.duration, () => {
+
+For further explanation of this warning, see: https://docs.reach.sh/rsh/errors/#RW0000
+

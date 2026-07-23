@@ -1,0 +1,19 @@
+ARG ALPINE_IMAGE
+FROM reachsh/haskell-build-artifacts-open AS build
+
+FROM $ALPINE_IMAGE
+RUN apk add gmp libgmpxx git
+
+COPY --from=build /usr/bin/solc /usr/bin/solc
+COPY --from=build /usr/bin/goal /usr/bin/goal
+COPY --from=build /usr/bin/z3 /usr/bin/z3
+COPY --from=build /build/bin/reachc /usr/bin/reachc
+RUN chmod +x /usr/bin/reachc
+COPY --from=build /build/stdlib.json ./stdlib_sol.json
+
+WORKDIR /app
+ENTRYPOINT ["/usr/bin/reachc"]
+ARG REACH_GIT_HASH
+ENV REACH_GIT_HASH="${REACH_GIT_HASH}"
+ENV REACHC_HASH="${REACH_GIT_HASH}"
+EXPOSE 3001

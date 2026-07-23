@@ -1,0 +1,8 @@
+reachc: error[RE0035]: Invalid function application. Cannot apply: UInt
+
+  ./Err_Eval_NotApplicable.rsh:5:13:application
+
+  5|     return 0();
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0035
+

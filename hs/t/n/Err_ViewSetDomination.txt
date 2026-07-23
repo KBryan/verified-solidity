@@ -1,0 +1,14 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 10 theorems; No failures!
+reachc: error[REP0001]: The value that the view `V.iV` is set to will never be observable
+
+  ./Err_ViewSetDomination.rsh:20:13:application
+
+  20|     V.iV.set(i);
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#REP0001
+

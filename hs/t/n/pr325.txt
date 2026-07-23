@@ -1,0 +1,13 @@
+reachc: error[RE0088]: These types are mismatched:
+  expected: Data({"None": Null, "Some": Address}) from reach standard library:106:32:application
+       got: Address from ./pr325.rsh:5:27:application
+
+  ./pr325.rsh:13:23:application
+
+  13|     const newX = x.set(0,this);
+
+Trace:
+  in [unknown function] from (./pr325.rsh:11:16:function exp) at (./pr325.rsh:11:12:application)
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0088
+

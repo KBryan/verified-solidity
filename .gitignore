@@ -1,0 +1,30 @@
+*~
+*.swp
+*.swo
+.DS_Store
+.vscode
+.ethereum
+/todo.html
+build
+/users
+/non-examples/dev
+*.index
+/exp
+.reach
+.docker-root
+/test.sh
+/docs/kToD.ts
+
+# We do NOT include reach-everest so `ag` and `fzf` still search it
+# But we DO include the things that get linked
+hs/app-closed
+hs/package.closed.yaml
+hs/src/Reach/Closed
+hs/test/Reach/Closed
+.env
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/reach-lang.iml
+.idea/vcs.xml
+examples/verified-solidity/foundry-test/scratch

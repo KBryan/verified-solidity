@@ -1,0 +1,8 @@
+reachc: error[RE0032]: Invalid Reach l-value syntax: JSMemberDot
+
+  ./object_mutation.rsh:6:12:assign
+
+  6|     obj0.x = 1;
+
+For further explanation of this error, see: https://docs.reach.sh/rsh/errors/#RE0032
+

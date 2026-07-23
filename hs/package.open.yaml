@@ -1,0 +1,241 @@
+name:                reach
+version:             0
+github:              "reach-sh/reach-lang"
+license:             Apache-2.0
+author:              "Reach"
+maintainer:          "jay@reach.sh"
+copyright:           "2019-2022 Reach"
+description:         Please visit the GitHub repository <https://github.com/reach-sh/reach-lang#readme>
+
+extra-source-files:
+- rsh/stdlib.rsh
+- sol/stdlib.sol
+- smt2/runtime.smt2
+- app/reach/embed/**/*
+
+dependencies:
+- base >= 4.7 && < 5
+
+default-extensions:
+- BangPatterns
+- DeriveAnyClass
+- DeriveDataTypeable
+- DeriveGeneric
+- DerivingStrategies
+- EmptyDataDeriving
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NumericUnderscores
+- OverloadedStrings
+- PartialTypeSignatures
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StrictData
+- TemplateHaskell
+- TupleSections
+- TypeApplications
+- TypeSynonymInstances
+
+ghc-options:
+- -Wall
+- -Werror
+- -Wcompat
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wredundant-constraints
+- -Wmissing-export-lists
+# - -Wpartial-fields
+- -Wwarn=unused-top-binds
+# - -Wmonomorphism-restriction # XXX
+- -O2
+- -fwrite-ide-info
+- -hiedir=.hie
+
+flags:
+  everest:
+    description: Build with Reach Everest
+    manual: True
+    default: False
+
+when:
+  - condition: flag(everest)
+    cpp-options: -DREACH_EVEREST
+
+library:
+  source-dirs: src
+  when:
+  - condition:           false
+    other-modules:       Paths_reach
+  dependencies:
+  - aeson
+  - aeson-pretty
+  - async
+  - base16
+  - base64
+  - bytestring
+  - containers
+  - cryptonite
+  - digest
+  - directory
+  - dlist
+  - edit-distance
+  - extra
+  - file-embed >= 0.0.9
+  - filepath
+  - generic-deriving
+  - http-client-tls
+  - http-conduit
+  - language-javascript >= 0.7.1.1
+  - memory
+  - mtl
+  - optparse-applicative
+  - parsec
+  - parsec-numbers
+  - pretty-show
+  - pretty-terminal
+  - process
+  - process-extras
+  - regex
+  - safe
+  - scientific
+  - search-algorithms
+  - simple-smt
+  - system-filepath
+  - temporary
+  - text
+  - time
+  - transformers
+  - unix-compat
+  - vector
+  - zlib
+  # XXX Simulator
+  - data-default-class
+  - scotty >= 0.12
+  - stm
+  - unliftio-core
+  - wai-extra
+
+tests:
+  reach-test:
+    main:                Main.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - reach
+    - aeson
+    - bytestring
+    - containers
+    - directory
+    - filepath
+    - generic-data
+    - generic-deriving
+    - hspec
+    - process
+    - tasty
+    - tasty-ant-xml
+    - tasty-discover
+    - tasty-golden
+    - tasty-hspec
+    - tasty-hunit
+    - tasty-quickcheck
+    - text
+
+_std_exe: &std-exe
+  main:                  Main.hs
+  when: # https://github.com/sol/hpack/issues/303#issue-340890073
+  - condition:           false
+    other-modules:       Paths_reach
+  ghc-options:
+  - -threaded
+  - -rtsopts
+  - -with-rtsopts=-N
+
+executables:
+  reachc:
+    <<: *std-exe
+    source-dirs:         app/reachc
+    dependencies:
+    - reach
+    - aeson
+    - bytestring
+    - containers
+    - directory
+    - extra
+    - filepath
+    - process
+    - safe
+    - temporary
+    - text
+  reach:
+    main:                Main.hs
+    source-dirs:         app/reach
+    when:
+    - condition:         false
+      other-modules:     Paths_reach
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -optP-Wno-nonportable-include-path
+    dependencies:
+    - reach
+    - aeson
+    - async
+    - bytestring
+    - containers
+    - extra
+    - filepath
+    - http-conduit
+    - mtl
+    - neat-interpolation
+    - optparse-applicative
+    - parsec
+    - pretty-simple
+    - safe
+    - text
+    - time
+    - unix
+    - unix-time
+    - utf8-string
+    - yaml
+  reach-cli:
+    <<: *std-exe
+    source-dirs:         app/reach-cli
+    dependencies:
+    - aeson
+    - bytestring
+    - containers
+    - http-client
+    - http-client-tls
+    - http-conduit
+    - http-types
+    - text
+  reachpc:
+    <<: *std-exe
+    source-dirs: app/reachpc
+    dependencies:
+    - reach
+    - Glob
+    - binary
+    - bytestring
+    - containers
+    - cryptonite
+    - directory
+    - extra
+    - filepath
+    - memory
+    - neat-interpolation
+    - split
+    - text
+    - time
+    # XXX replace use with json
+    - tomland

@@ -1,0 +1,12 @@
+New images are available for:
+ * reachsh/reach-cli     bf5922b9:  latest
+ * reachsh/react-runner  46cff09d:  4bfdf20d, 2022-01-27
+ * reachsh/runner        c65fa648:  4bfdf20d, 2022-01-27
+
+New (optional) connectors are available:
+ * reachsh/devnet-algo   150cf268:  4bfdf20d, 2022-01-27
+ * reachsh/devnet-eth    4cd1b249:  4bfdf20d, 2022-01-27
+
+The following images are fully synchronized:
+ * reachsh/reach         b20f3155:  4bfdf20d, 2022-01-27
+ * reachsh/rpc-server    68d9ade0:  4bfdf20d, 2022-01-27

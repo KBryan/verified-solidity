@@ -1,0 +1,17 @@
+.stack-work/
+reach.cabal
+*~
+test.out/
+*.actual
+.hie/
+stan.html
+test-reports/
+package.yaml
+.reach/
+/src/Reach/Version.hs
+/sol/stdlib.sol
+/sol/stdlib.json
+/sol/stdlib_openzep.sol
+/sol/*.tar.gz
+/sol/openzeppelin-contracts*
+/.docker-root
