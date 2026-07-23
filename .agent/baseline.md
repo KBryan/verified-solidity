@@ -41,10 +41,11 @@
 - Hop 3, lts-21.25 → lts-22.44 (GHC 9.6.7), committed `56bf33153` (+ pragma-order fixup `eb9981139`): **hs-build PASS**, **hs-test 812/812 PASS (2425s)**, zero golden drift. Mechanical API migrations required (12 rounds of iterative builds): mtl 2.3 Control.Monad re-export removal (12 files net), base16-1.0 renames (Eval/Core decodeBase16Untyped; Backend/JS extractBase16 — emitted JS byte-identical), scotty 0.20 (ActionT arity, MonadUnliftIO for WebM via new unliftio-core dep, documented -Wno-deprecations for param/raise fall-through), optparse-applicative 0.18 prettyprinter migration (monomorphic text shim in app/reach/Main.hs). Post-hop validation on the 9.6.7 binary: local compile PASS, Foundry deploy PASS, ETH-devnet deploy smoke PASS, hs-format idempotent vs HEAD.
 - **Phase 4 COMPLETE (2026-07-22)**: lts-19.7 → lts-22.44, GHC 9.0.2 → 9.6.7, in three shippable resolver commits; all five fork pins survived (ormolu decoupled into hs/ormolu-tool/, others compile unchanged). README stack floor updated to v2.15+.
 
-## Lint Results (updated 2026-07-22)
+## Lint Results (updated 2026-07-22, post `brew install bash hadolint the_silver_searcher`)
 - `make sh-lint`: shellcheck installed; tracked scripts clean (repo-wide run fails only on untracked `AgenticEngineeringFramework/` scripts — pre-existing, not in git).
-- `make docker-lint`: **SKIPPED** — `hadolint` not installed.
-- `make check`: **SKIPPED** — `ag` (the_silver_searcher) not installed.
+- `make check`: **PASS** (exit 0) — output lists pre-existing TODO/FIXME/XXX markers (informational), no version-string drift.
+- `make docker-lint`: **FAIL** (pre-existing) — hadolint warnings across legacy Dockerfiles only (`examples/*/Dockerfile`, `scripts/devnet-algo/Dockerfile`): unpinned `latest`/`apk add` versions, `COPY` without `WORKDIR`, consecutive-RUN infos. Nothing from recent work; fixing is optional cleanup.
+- mo durable fix confirmed: brew bash 5.3.15 installed; stock `/usr/local/bin/mo` (shebang `env bash`) now works — `make expand` PASS with unpatched mo, Version.hs regenerated intact.
 
 ## Build Results (updated 2026-07-22)
 - `cd hs && make hs-build`: **PASS** on lts-22.44/GHC 9.6.7 (see Phase 4 above).
@@ -57,18 +58,17 @@
 | stack | present | v2.15+ (README) | 3.1.1 |
 | z3 | present | 4.12.5 | 4.12.5 ✓ |
 | solc | present | 0.8.26 | 0.8.26 ✓ |
-| mo | present but BROKEN under bash 3.2 | — | patched copy in session scratchpad |
+| mo | present, WORKING (brew bash 5.3.15 installed 2026-07-22) | — | ok |
+| bash (brew) | present | — | 5.3.15 |
 | node | present | 16.14 (images) | 24.x |
 | docker | present, daemon running | — | — |
 | shellcheck | present | — | — |
 | forge (Foundry) | present | — | 0.8.33 |
-| hadolint | MISSING | — | — |
-| ag | MISSING | — | — |
+| hadolint | present | — | 2.14.0 |
+| ag | present | — | 2.2.0 |
 | goal | MISSING (Docker-backed shim recipe in AGENTS.md) | — | — |
 
 ## Action Items
-- Durable mo fix: `brew install bash` (mo's shebang is `env bash`; needs ≥4.4) or upgrade mo — until then every `make expand` on stock mo truncates Version.hs
-- Install hadolint, ag: `brew install hadolint the_silver_searcher`
 - Rebuild the Docker-backed `goal` shim (identical-path mounts + `-w "$PWD"`) before the next full `hs-test`
 - Exercise `cd js && make build` and `cd docs && make build` now that the Docker daemon is running
-- Decide whether to keep or delete `AGENTS.md.backup.1784773667` / `manifest.yml.backup.1784773667` (content now restored) and the untracked `AgenticEngineeringFramework/` checkout
+- Optional cleanup: fix pre-existing hadolint warnings in legacy `examples/` and `scripts/devnet-algo` Dockerfiles so `make docker-lint` goes green

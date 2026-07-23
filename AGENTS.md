@@ -84,8 +84,8 @@ curl -sSL https://git.io/get-mo -o mo && chmod +x mo && sudo mv mo /usr/local/bi
 # Required: stack v2.15+, z3 4.12.5, solc 0.8.26, mo, and `goal` (or symlink scripts/goal-devnet as `goal`)
 # Docker daemon required for image builds, js/ builds, docs builds, running examples,
 # and the goal shim used by the full Haskell test suite
-# CAUTION: stock mo crashes under macOS bash 3.2 and truncates its target file to empty —
-# see Known Issues below
+# CAUTION: mo needs bash >= 4.4 (`brew install bash`); under macOS system bash 3.2 it
+# crashes and truncates its target file to empty — see Known Issues below
 ```
 
 ### Validation
@@ -112,10 +112,11 @@ cd hs && make hs-format
 # Shell script lint (requires shellcheck — installed)
 make sh-lint
 
-# Dockerfile lint (requires hadolint — not installed locally)
+# Dockerfile lint (requires hadolint — installed; currently fails on pre-existing
+# warnings in legacy examples/ and devnet Dockerfiles)
 make docker-lint
 
-# Search for version-string drift and TODO markers (requires ag — not installed locally)
+# Search for version-string drift and TODO markers (requires ag — installed)
 make check
 ```
 
@@ -246,7 +247,7 @@ cd hs && make watch-reachc     # or watch, watch-reach-cli
 
 ### Known Issues / Current State
 
-- **mo + macOS bash 3.2**: stock `/usr/local/bin/mo` crashes under bash 3.2 (`MO_FUNCTION_CACHE_HIT[@]: unbound variable`), and because the Makefile uses `>` redirection the target file (`hs/src/Reach/Version.hs`) is left **empty** while make considers it up to date — `rm` the target before retrying. Fix: `brew install bash`, upgrade mo, or patch the two unguarded `"${MO_FUNCTION_CACHE_*[@]}"` loops (lines ~907/913)
+- **mo + macOS bash 3.2**: stock `/usr/local/bin/mo` crashes under bash 3.2 (`MO_FUNCTION_CACHE_HIT[@]: unbound variable`), and because the Makefile uses `>` redirection the target file (`hs/src/Reach/Version.hs`) is left **empty** while make considers it up to date — `rm` the target before retrying. Fix: `brew install bash` (mo's `env bash` shebang then picks up bash 5; applied on the primary dev machine 2026-07-22), or upgrade mo / patch the two unguarded `"${MO_FUNCTION_CACHE_*[@]}"` loops (lines ~907/913)
 - **Full `hs-test` needs `goal`**: ALGO golden tests shell out to `goal clerk compile`; without it ~450 tests fail. Use a Docker-backed goal shim that mounts the repo and TMPDIR at identical container paths **and** passes `-w "$PWD"` (the stock `scripts/goal-devnet` mount is insufficient for reachc's absolute paths)
 - **Accept-run hazard**: if Docker/`goal` is down, `make hs-test-accept` silently corrupts `t/n` goldens (the Docker error text gets accepted as expected output). Always `docker info` first and `git diff hs/t | grep -i docker` after
 - **Bytecode-size goldens**: `t/y/tooBig` and `t/y/gh-1183` embed bytecode sizes and drift whenever solc/codegen changes — expected churn, audit that diffs are size integers only
