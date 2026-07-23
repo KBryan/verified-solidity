@@ -7,7 +7,7 @@
 - Context: the `.adws` installer overwrote AGENTS.md and manifest.yml with blank templates (backups at `*.backup.1784773667`). This /prime run restored the real content, refreshed for the post-Phase-4 state (repo renamed verified-solidity, history squashed to `f5c2932`, lts-22.44/GHC 9.6.7, DEPS pins solc 0.8.26 / z3 4.12.5).
 - `cd hs && make expand`: first attempt hit the known mo/bash-3.2 crash and truncated `src/Reach/Version.hs` to 0 bytes (the exact hazard documented below); repaired by patching mo (guarded the two unguarded `MO_FUNCTION_CACHE_*[@]` loops at lines ~907/913) into the session scratchpad `bin/` and re-running with `rm`'d targets: **PASS** — Version.hs (859 B) and sol/stdlib.sol (23 KB, OpenZeppelin expansion) regenerated intact. The durable fix (`brew install bash` or upgrading mo) is still outstanding.
 - Toolchain re-audit: shellcheck present, forge present, Docker daemon **running**; hadolint, ag, goal still missing; solc 0.8.26 / z3 4.12.5 / stack 3.1.1 match DEPS pins.
-- Full `hs-build`/`hs-test` not re-run this session — last full run (812/812 PASS on lts-22.44, 2026-07-22, recorded below) is current for HEAD.
+- Full `hs-test` re-run 2026-07-22 after toolchain completion (brew bash 5, rebuilt goal shim): **812/812 PASS (2872s)** — zero golden drift, confirming the rebuilt `/usr/local/bin/goal` shim at full-suite scale on lts-22.44/GHC 9.6.7.
 
 ## Test Results
 - `cd hs && make hs-build`: **PASS** — full stack build on lts-19.7/GHC 9.0.2, 186 actions, reachc/reach/reach-test installed.
