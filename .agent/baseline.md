@@ -46,6 +46,7 @@
 - `make check`: **PASS** (exit 0) — output lists pre-existing TODO/FIXME/XXX markers (informational), no version-string drift.
 - `make docker-lint`: **FAIL** (pre-existing) — hadolint warnings across legacy Dockerfiles only (`examples/*/Dockerfile`, `scripts/devnet-algo/Dockerfile`): unpinned `latest`/`apk add` versions, `COPY` without `WORKDIR`, consecutive-RUN infos. Nothing from recent work; fixing is optional cleanup.
 - mo durable fix confirmed: brew bash 5.3.15 installed; stock `/usr/local/bin/mo` (shebang `env bash`) now works — `make expand` PASS with unpatched mo, Version.hs regenerated intact.
+- goal shim rebuilt (2026-07-22) at `/usr/local/bin/goal`: docker run against local `reachsh/devnet-algo:latest` with identical-path mounts (repo, `/var/folders` + `/private/var/folders`, `/private/tmp`) and `-w "$PWD"`. Verified: `goal clerk compile` on an absolute path PASS; end-to-end `REACH_DOCKER=0 ./reach compile examples/argz/index.rsh` PASS (1 theorem verified, fresh `.teal.tok` artifacts emitted). Note: shim is machine-local (not in the repo); the recipe lives in the shim's own comments and AGENTS.md.
 
 ## Build Results (updated 2026-07-22)
 - `cd hs && make hs-build`: **PASS** on lts-22.44/GHC 9.6.7 (see Phase 4 above).
@@ -66,9 +67,8 @@
 | forge (Foundry) | present | — | 0.8.33 |
 | hadolint | present | — | 2.14.0 |
 | ag | present | — | 2.2.0 |
-| goal | MISSING (Docker-backed shim recipe in AGENTS.md) | — | — |
+| goal | present — Docker shim at `/usr/local/bin/goal` (rebuilt 2026-07-22) | — | devnet-algo image |
 
 ## Action Items
-- Rebuild the Docker-backed `goal` shim (identical-path mounts + `-w "$PWD"`) before the next full `hs-test`
 - Exercise `cd js && make build` and `cd docs && make build` now that the Docker daemon is running
 - Optional cleanup: fix pre-existing hadolint warnings in legacy `examples/` and `scripts/devnet-algo` Dockerfiles so `make docker-lint` goes green
