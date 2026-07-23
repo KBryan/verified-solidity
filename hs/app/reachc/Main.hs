@@ -13,6 +13,7 @@ import Data.Typeable (cast)
 import Reach.AST.Base
 import Reach.CommandLine
 import Reach.Compiler
+import Reach.Connector.ETH_SolCheck
 import Reach.Report
 import Reach.Version
 import Safe
@@ -20,6 +21,7 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
+import System.IO
 import System.IO.Temp
 import System.Process
 
@@ -74,6 +76,16 @@ main = do
   let ccStopAfterEval = co_stopAfterEval
   let ccSolOnly = co_solOnly
   let ccVerifyReport = co_verifyReport
+  ccCompanionCheck <-
+    case co_companionCheck of
+      Nothing -> return $ if co_solOnly then CCL_Require else CCL_Warn
+      Just s ->
+        case parseCompanionCheckLevel s of
+          Just l -> return l
+          Nothing -> do
+            hPutStrLn stderr $ "reachc: invalid --companion-check level " <> show s <> "; expected require, warn, or off"
+            exitWith $ ExitFailure 1
+  let ccCompanionNoSolver = co_companionNoSolver
   let ccShouldVerify = not cte_REACH_ACCURSED_UNUTTERABLE_DISABLE_VERIFICATION_AND_LOSE_ALL_YOUR_MONEY_AND_YOUR_USERS_MONEY
   ccDotReachDir <- makeAbsolute $ fromMaybe (takeDirectory co_source </> ".reach") co_mdirDotReach
   let outd = fromMaybe (takeDirectory co_source </> "build") co_moutputDir

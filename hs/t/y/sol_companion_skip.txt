@@ -1,0 +1,8 @@
+Compiling `main`...
+Verifying knowledge assertions
+Verifying for generic connector
+  Verifying when ALL participants are honest
+  Verifying when NO participants are honest
+Checked 4 theorems; No failures!
+Companion Solidity sol_companion_child.sol:Child: analysis skipped (no SMT solver available to solc)
+Artifacts: sol_companion_skip.main.abi.json sol_companion_skip.main.companion.Child.sol sol_companion_skip.main.sol sol_companion_skip.main.verify.json

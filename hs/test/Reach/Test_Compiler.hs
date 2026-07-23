@@ -45,13 +45,22 @@ filterOutLines prefix bs0 = bs'
     bs2s = intersperse (BS.singleton 10) $ filter p bs1s
     bs' = BS.concat $ bs2s
 
--- Fixtures named sol_only* are compiled in `--sol` mode and their goldens
--- additionally record which product artifacts the compile left in build/.
+-- Fixtures named sol_only* / sol_companion* are compiled in `--sol` mode and
+-- their goldens additionally record which product artifacts the compile left
+-- in build/. sol_companion* fixtures reference a fixture-adjacent companion
+-- .sol file; the *skip* variants force the solver-unavailable path (with the
+-- level lowered to warn) so their goldens don't depend on the host's libz3.
 solOnlyArgs :: FilePath -> [String]
-solOnlyArgs afp =
-  case "sol_only" `isPrefixOf` takeBaseName afp of
-    True -> ["--sol"]
-    False -> []
+solOnlyArgs afp
+  | "sol_only" `isPrefixOf` b = ["--sol"]
+  | "sol_companion" `isPrefixOf` b =
+    ["--sol"]
+      <> case "skip" `isInfixOf` b of
+        True -> ["--companion-check", "warn", "--companion-check-no-solver"]
+        False -> []
+  | otherwise = []
+  where
+    b = takeBaseName afp
 
 solOnlyArtifacts :: FilePath -> FilePath -> IO Output
 solOnlyArtifacts dir afp =

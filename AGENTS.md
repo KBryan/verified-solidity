@@ -38,6 +38,7 @@
 | `scripts/reach-sol` | cli | Standalone verified-Solidity compile driver | `scripts/reach-sol` |
 | `examples/` | tests | ~255 example DApps, used as integration tests | `examples/*/index.rsh` |
 | `examples/verified-solidity/` | example | Worked verified-Solidity example incl. Foundry deploy test | `examples/verified-solidity/index.rsh` |
+| `examples/verified-solidity-interop/` | example | Companion-Solidity example: hand-written `Vault.sol` deployed/called from Reach, SMTChecker-verified | `examples/verified-solidity-interop/index.rsh` |
 | `specs/` | docs | Design specs (verified-Solidity compiler, toolchain upgrades) | `specs/verified-solidity-compiler.md` |
 | `docs/` | docs | Documentation site source | `docs/src/` |
 | `rpc-client/` | libraries | RPC clients for C#, Go, JS, Python | — |
@@ -53,6 +54,7 @@
 - **Compiler pipeline**: `.rsh` source → JS-like parse (`Parser.hs`) → evaluation (`Eval/`) → linearization (`Linearize.hs`) → end-point projection (`EPP.hs`) → verification (`Verify/` via Z3 SMT) → backends (`Backend/` emits JS; `Connector/` emits Solidity for EVM chains and TEAL for Algorand)
 - **Verification**: Every compile runs formal verification with Z3 (`hs/smt2/runtime.smt2` is the SMT runtime theory) — token linearity, balance sufficiency, arithmetic overflow, assertion honesty under honest and dishonest participant models
 - **Verified-Solidity mode** (`reach sol`): ETH-only compile that emits `index.main.sol` + `index.main.abi.json` + `index.main.verify.json` into `build/`, only when verification succeeds; on failure the compile exits nonzero with a counterexample witness and emits no Solidity
+- **Companion Solidity** (`ContractCode({ETH: 'x.sol:C'})` + `new Contract` + `remote`): hand-written `.sol` sources are analyzed with solc's SMTChecker (CHC engine; driver in `hs/src/Reach/Connector/ETH_SolCheck.hs`), results land in `verify.json` (`vr_solidity`) along with every verifier havoc boundary (`vr_assumptions`); gate via `reachc --companion-check=require|warn|off` (default `require` under `--sol`, `warn` otherwise); companion sources are copied to `build/` as `<src>.<app>.companion.<Contract>.sol`
 - **EVM support**: Generated Solidity is compiled with `solc` 0.8.26 (pinned in `DEPS`), with `evmVersion` pinned to `paris` in `hs/src/Reach/Connector/ETH_solc.hs` (solc ≥0.8.20's default shanghai target emits PUSH0, which pre-shanghai chains and the bundled devnet geth reject); Solidity runtime support in `hs/sol/` includes a vendored OpenZeppelin ERC20
 - **Database**: None
 - **External integrations**: Docker Hub (legacy image distribution), CircleCI + GitHub Actions (CI), devnets for Algorand (`scripts/devnet-algo`) and Ethereum (`scripts/devnet-eth`)
@@ -129,6 +131,10 @@ REACH_DOCKER=0 ./reach sol examples/verified-solidity/index.rsh
 
 # Foundry deploy test against the emitted .sol (forge installed locally)
 examples/verified-solidity/foundry-test/run.sh
+
+# Companion-Solidity interop example (hand-written Vault.sol + SMTChecker)
+REACH_DOCKER=0 ./reach sol examples/verified-solidity-interop/index.rsh
+examples/verified-solidity-interop/foundry-test/run.sh
 
 # Compile any example with a locally built compiler (no Docker)
 REACH_DOCKER=0 ./reach compile examples/argz/index.rsh

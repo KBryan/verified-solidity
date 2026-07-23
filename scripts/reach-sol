@@ -2,10 +2,14 @@
 # reach-sol: compile a Reach program to verified Solidity artifacts.
 #
 # Runs `reachc --sol`, which formally verifies the program and, only on
-# success, emits three artifacts into the output directory:
+# success, emits these artifacts into the output directory:
 #   <src>.<app>.sol         self-contained Solidity source
 #   <src>.<app>.abi.json    contract ABI
 #   <src>.<app>.verify.json machine-readable verification report
+# and, for each companion Solidity source referenced via ContractCode:
+#   <src>.<app>.companion.<Contract>.sol
+# Companion sources are analyzed with solc's SMTChecker; see the
+# --companion-check flag of reachc.
 #
 # Requires `reachc`, `z3`, and `solc` on PATH.  Version pins live in the
 # repository DEPS file (SOLC_VERSION, Z3_VERSION).

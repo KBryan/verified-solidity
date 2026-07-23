@@ -6,7 +6,8 @@ The output drops into standard Ethereum tooling (Foundry, Hardhat, ethers, viem)
 
 To be clear about the authoring model: you write Reach, not raw Solidity.
 The verification runs on Reach's optimized intermediate representation; Solidity is the verified _output_.
-Reach does not verify arbitrary hand-written Solidity.
+Reach does not verify arbitrary standalone Solidity.
+However, hand-written companion contracts referenced from a Reach program via `ContractCode` do get analyzed with solc's SMTChecker; see [the interop guide](##guide-verified-solidity-interop).
 
 ## Compiling
 

@@ -28,6 +28,9 @@ hs/test/Reach/Closed
 .idea/reach-lang.iml
 .idea/vcs.xml
 examples/verified-solidity/foundry-test/scratch
+examples/verified-solidity-interop/foundry-test/scratch
+# solc standard-json debug dumps written next to ContractCode .sol sources
+*.sol.solc.json
 
 # Agentic Engineering Framework installer scaffolding (local-only)
 /.adws/

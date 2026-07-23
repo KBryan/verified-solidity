@@ -1243,7 +1243,10 @@ smt_e at_dv mdv de = do
       forM_ mdv $ smtMapReviewRecordRef at mpv fa'
     DLE_MapSet at mpv fa _ mna ->
       smtMapUpdate at mpv fa mna
-    DLE_Remote at _ _ _ _ -> unbound at
+    DLE_Remote at _ _ rng_ty dr -> do
+      recordHavoc at "remote" (T.pack $ fromMaybe "<raw call>" $ dr_mfun dr) $
+        "havoc: " <> (T.pack $ show $ pretty rng_ty)
+      unbound at
     DLE_TokenNew at _ -> unbound at
     DLE_TokenBurn at _ _ -> unbound at
     DLE_TokenDestroy at _ -> unbound at
@@ -1282,11 +1285,29 @@ smt_e at_dv mdv de = do
       let nonep = List [Atom noneCtor, nonev]
       let nonec = List [nonep, da']
       bound at $ smtApply "match" [mo', List [nonec, somec]]
-    DLE_ContractNew at _ _ -> unbound at
-    DLE_ContractFromAddress at _addr -> unbound at
+    DLE_ContractNew at _ _ -> do
+      recordHavoc at "contractNew" "new Contract" "havoc: Contract"
+      unbound at
+    DLE_ContractFromAddress at _addr -> do
+      recordHavoc at "contractFromAddress" "Contract.fromAddress" "havoc: Contract"
+      unbound at
   where
     bound at se = pathAddBound at mdv (Just $ SMTProgram de) se Context
     unbound at = pathAddUnbound at mdv (Just $ SMTProgram de)
+    -- Observation only: record that this result is unconstrained in the
+    -- verification model, so verify.json can enumerate the trust boundary.
+    recordHavoc at kind callee assumed = do
+      VerifyOpts {..} <- (vst_vo . ctxt_vst) <$> ask
+      forM_ vo_report $ \vrr -> liftIO $ do
+        cwd <- getCurrentDirectory
+        modifyIORef vrr $
+          vraAddAssumption $
+            BoundaryAssumption
+              { ba_at = T.pack $ redactAbsStr cwd $ show at
+              , ba_kind = kind
+              , ba_callee = callee
+              , ba_assumed = assumed
+              }
     doClaim at f ct ca' mmsg = do
       let check_m = verify1 at f (TClaim ct) ca' mmsg
       let assert_m = smtAssertCtxt ca'
