@@ -110,10 +110,13 @@ jobs:
       # comparing against its .txt. tasty-golden silently creates a missing
       # .txt and passes, so require it to exist; on failure, regenerate the
       # missing goldens and upload them for review.
+      # erc1155-companion/erc1155.rsh is a library module: compiled alone it
+      # builds an empty default app for every connector, which needs ALGO's
+      # `goal`, so it is golden-tested only by the full local suite.
       - name: Verified-Solidity example goldens
         working-directory: hs
         env:
-          TASTY_PATTERN: /verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/
+          TASTY_PATTERN: (/verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/) && !/erc1155.rsh/
           TASTY_NO_CREATE: "true"
         run: stack test --fast reach:test:reach-test
 
@@ -121,7 +124,7 @@ jobs:
         if: failure()
         working-directory: hs
         env:
-          TASTY_PATTERN: /verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/
+          TASTY_PATTERN: (/verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/) && !/erc1155.rsh/
         run: |
           stack test --fast reach:test:reach-test || true
           cd ..
