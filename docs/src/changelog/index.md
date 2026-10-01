@@ -2,12 +2,53 @@
 
 Below is a list of changes to Reach.
 Versions and changes-within-versions are listed in reverse-chronological order: newest things first.
+Entries dated 2026 and later are changes made in this independent continuation of Reach.
 
 ## 0.1.13: 2022/11 - present
 
 @{verRC("0.1.13")}
 
 @{rcNext("0.1.13-rc.4")}
+
++ 2026/10/01: **Backwards Incompatible**: `{!cmd} reach sol` (`{!cmd} reachc --sol`) now always verifies arithmetic.
+  Every addition, subtraction, multiplication, division, and modulus must be proven free of overflow, wraparound, and division by zero, and `{!rsh} setOptions({ verifyArithmetic: false })` has no effect in this mode.
+  A program whose arithmetic might overflow now fails to compile under `--sol`, with a counterexample.
+  Ordinary compiles are unchanged.
+  The verification report gains `vr_verifyArithmetic`.
+  See @{seclink("guide-verified-solidity")}.
+
++ 2026/10/01: **Backwards Incompatible**: The companion check now fails closed.
+  A solc run that reports an error, exits nonzero, or produces no model-checker results for a companion source is recorded as `unknown`, which is fatal at `--companion-check=require` (the default under `--sol`).
+  Previously such runs were treated as passing.
+  A companion with nothing for the model checker to check now needs `--companion-check=warn`.
+
++ 2026/10/01: `{!cmd} reach sol` no longer leaves stale or partial artifacts.
+  Previous outputs for a source are removed before compilation starts, so a parse or evaluation error, or a renamed export, no longer leaves an old `.sol` and a passing report behind.
+  `verify.json` is now written last, after code generation and solc succeed, and a code-generation failure removes any partially written `.sol` and `.abi.json`.
+
++ 2026/10/01: Usage reporting has been removed.
+  The compiler, the command-line tool, and the devnet images built from this repository no longer send usage data anywhere; `--disable-reporting` is still accepted but has no effect.
+  See @{seclink("ref-usage-arg-disable-reporting")}.
+
++ 2026/10/01: The command-line tool's self-update now downloads the `{!cmd} reach` script from this project's repository instead of the upstream Reach site, and no longer overwrites the script if the download fails.
+
++ 2026/10/01: Hardened the `erc1155-companion` and `erc8001-atomic-swap` examples.
+  The ERC-1155 mint can only be claimed by the recipient the admin names, and burning requires the holder's approval.
+  The ERC-8001 swap works for either address order, tolerates front-run proposals and out-of-band execution, and always finishes once the intent is cancelled or expires.
+  Its vendored OpenZeppelin `ECDSA` is upgraded to 4.7.3 (CVE-2022-35961).
+
++ 2026/07/23: Added `erc1155-companion` and `erc8001-atomic-swap` examples, which use OpenZeppelin ERC-1155 and ERC-8001 companion contracts from a Reach program.
+
++ 2026/07/23: Added companion Solidity contracts to verified-Solidity output.
+  Hand-written `.sol` sources referenced via `{!rsh} ContractCode` are analyzed with solc's SMTChecker, gated by `--companion-check=require|warn|off`, and reported in `verify.json` (`vr_solidity`), along with every verifier boundary assumption (`vr_assumptions`).
+  See @{seclink("guide-verified-solidity-interop")}.
+
++ 2026/07/22: Added verified-Solidity output: `{!cmd} reach sol` (and `{!cmd} reachc --sol`, or `scripts/reach-sol`) compiles a program for Ethereum only and, only if verification succeeds, emits a self-contained `.sol` file, its ABI, and a machine-readable verification report (`verify.json`).
+  It needs no Docker, JavaScript runtime, or Algorand toolchain.
+  See @{seclink("guide-verified-solidity")}.
+
++ 2026/07/22: Upgraded the toolchain to GHC 9.6.7 (Stackage LTS 22.44), solc 0.8.26, and z3 4.12.5.
+  Generated Solidity is compiled with `evmVersion: paris`, so contracts avoid the `PUSH0` opcode and deploy on pre-Shanghai chains.
 
 @{rcHead("0.1.13-rc.3")}
 
