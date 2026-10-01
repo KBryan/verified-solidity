@@ -4,7 +4,6 @@ FROM ethereum/client-go:v1.10.26
 RUN apk add curl --no-cache
 
 COPY run.sh /run.sh
-COPY daily-ping.sh /
 
 RUN /run.sh init
 

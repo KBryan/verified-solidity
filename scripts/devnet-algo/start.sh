@@ -1,8 +1,5 @@
 #!/bin/bash -x
 
-# start daily ping telemetry script
-sh /daily-ping.sh &
-
 # Start postgres
 export PGDATA="$POSTGRES_DATA"
 su postgres -c "postgres" &

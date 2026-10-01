@@ -435,28 +435,15 @@ This `env` file exports environment variable settings and is intended to be `sou
 If an `env` file already exists, `{!cmd} reach config` offers to back it up before proceeding.
 
 # {#ref-usage-arg-disable-reporting} @{ref("cmd", "reach --disable-reporting")} `reach --disable-reporting`
-The Reach command-line tool collects anonymous usage data by default, but this can be skipped by prepending `--disable-reporting` before any given sub-command, e.g.:
+This distribution does not collect usage data.
+The command-line tool, the compiler, and devnet images built from this repository send no usage reports anywhere.
+
+Upstream Reach reported anonymous usage data to a service that this fork neither runs nor controls, so that reporting has been removed.
+`--disable-reporting` is still accepted for compatibility, but it has no effect, e.g.:
 
 ```cmd
 $ reach --disable-reporting compile index.rsh
 ```
 
-Out of respect for users' privacy and the security of their intellectual property, Reach takes special care to avoid gathering personally-identifiable information and instead tallies only metrics which cannot easily be correlated back to specific individuals and which doesn't leak sensitive details about their code.
-
-For instance, we discard IP addresses and strip timestamps to just UTC dates.
-
-Only the following are tracked:
-- From the Reach command-line tool or VS Code extension:
-  - A random ID that's unique per-user and per-machine (but which doesn't reveal the user's identity);
-  - The UTC date on which an event occurred;
-  - The type of event, e.g. `{!cmd} reach run` or `{!cmd} reach devnet`;
-  - Resultant [error code](##ref-error-codes) or indication of success associated with the event;
-  - `{!cmd} REACH_VERSION`;
-  - `{!cmd} REACH_CONNECTOR_MODE`;
-  - Whether the event was triggered by the [Reach VSCode extension](##guide-install-VSCode).
-
-- [Geolocation data](https://www.npmjs.com/package/fast-geoip) inferred from your IP address:
-  - The user's country;
-  - The user's state or region.
-
-Invoking a sub-command with `--disable-reporting` instructs `reach` not to send any usage data at all.
+Note that Docker images pulled from the upstream `reachsh` Docker Hub organization are built from upstream sources and may still report usage.
+Use `REACH_DOCKER=0` with a locally built compiler to run only this repository's code.
