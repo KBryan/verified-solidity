@@ -113,7 +113,6 @@ COPY --from=prepare /var/lib/algorand_network/ /var/lib/algorand_network/
 ### Our stuff
 COPY rotate_dbg.sh /
 COPY start.sh /
-COPY daily-ping.sh /
 
 EXPOSE 4180
 EXPOSE 8980

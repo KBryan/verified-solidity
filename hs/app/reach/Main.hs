@@ -79,10 +79,11 @@ f_onlyEverest sub = pure $ do
   putStrLnPacked $ "reach " <> sub <> " is " <> onlyWithReachEverest
 
 uriIssues :: Text
-uriIssues = "https://github.com/reach-sh/reach-lang/issues"
+uriIssues = "https://github.com/KBryan/verified-solidity/issues"
 
 uriReachScript :: IsString a => a
-uriReachScript = "https://docs.reach.sh/reach"
+-- Self-update source: this fork's `reach` script on its protected main branch.
+uriReachScript = "https://raw.githubusercontent.com/KBryan/verified-solidity/main/reach"
 
 esc :: FilePath -> FilePath
 esc x = "'" <> e <> "'"
@@ -2422,13 +2423,14 @@ updateScript = do
   Env {e_var = Var {..}, ..} <- ask
   now <- pack <$> zulu
   let dch = pack e_dirConfigHost
+  let uri = uriReachScript :: Text
   pure
     [N.text|
     mkdir -p "$dch/_backup"
     cp $reachEx "$dch/_backup/reach-$now"
     echo
     echo "Backed up $reachEx to $dch/_backup/reach-$now."
-    curl -sS -o $reachEx https://docs.reach.sh/reach \
+    curl -fsS -o $reachEx $uri \
       && chmod +x $reachEx \
       && echo "Replaced $reachEx with latest version." \
       && rm -r "$$TMP" \

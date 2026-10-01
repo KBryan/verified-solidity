@@ -131,26 +131,6 @@ run_s () {
   sh -ac "$TMP/out.sh" "$0"
 }
 
-call_home () {
-CALL_HOME_ENCODED="eyJ1c2VySWQiOiJ7e1JFQUNIQ19JRH19\
-Iiwic3RhcnRUaW1lIjoie3tTVEFSVF9USU1FfX0iLCJy\
-ZXN1bHQiOiJ7e1JFU1VMVH19IiwidmVyc2lvbiI6Int7\
-UkVBQ0hfVkVSU0lPTn19IiwiY29ubmVjdG9yTW9kZSI6\
-Int7Q09OTkVDVE9SX01PREV9fSIsInVzaW5nVmlzdWFs\
-U3R1ZGlvRXh0ZW5zaW9uIjoie3tVU0lOR19WU1NUVURJ\
-T19FWFRFTlNJT059fSIsImluaXRpYXRvciI6Int7SU5JVElBVE9SfX0ifQ=="
-
-  CALL_HOME_TEMPLATE_DECODED=$(printf '%s' "$CALL_HOME_ENCODED" | base64 -d)
-  TRANSLATED_TEMPLATE=$(echo "${CALL_HOME_TEMPLATE_DECODED}" | sed -e "s/{{REACHC_ID}}/$REACHC_ID/g" \
-    -e "s/{{START_TIME}}/$(date -u +"%Y-%m-%d")/g" \
-    -e "s/{{RESULT}}/$1/g" \
-    -e "s/{{REACH_VERSION}}/$2/g" \
-    -e "s/{{CONNECTOR_MODE}}/$3/g" \
-    -e "s/{{USING_VSSTUDIO_EXTENSION}}/$4/g" \
-    -e "s/{{INITIATOR}}/$5/g")
-  curl -X POST "https://log.reach.sh/submit" -d "$TRANSLATED_TEMPLATE" || exit 1
-}
-
 package_install () {
   if ( command -v apt > /dev/null 2>&1 ); then
     PACKAGE_MANAGER="apt"
@@ -203,7 +183,6 @@ install_docker () {
     printf "\nThis installation requires a restart for completion; do you want to restart now? [Y,n]: "
     read -r RESPONSE
     if [ "${RESPONSE}" = "Y" ]; then
-      call_home "Docker installed by Reach" "0.0.0" "none" "false" "script_deps"
       powershell.exe 'shutdown -r -t 0'
     fi
   else
@@ -228,9 +207,6 @@ else
 fi
 for DEP in $DEPS; do
   if ! (command -v "${DEP}" >/dev/null 2>&1); then
-    if [ "${DEP}" != "curl" ]; then
-      call_home "$DEP is not installed" "0.0.0" "none" "false" "script_deps"
-    fi
     printf "Reach relies on an installation of %s; do you want to install it? [Y,n]: " "${DEP}"
     read -r RESPONSE
     if [ "${RESPONSE}" = "Y" ]; then
@@ -254,7 +230,7 @@ case "$?" in
      *) [ -z "$(ls -A "$TMP")" ] && rm -r "$TMP"; exit 1 ;;
     esac
     ;;
-  50) docker pull "$IMG" && curl https://docs.reach.sh/reach -o "$0" && chmod +x "$0" && rm -r "$TMP" && exit 0 ;;
+  50) docker pull "$IMG" && curl -fsS https://raw.githubusercontent.com/KBryan/verified-solidity/main/reach -o "$0" && chmod +x "$0" && rm -r "$TMP" && exit 0 ;;
   60) rm -r "$TMP" && exit 60 ;; # Updates available
    0) rm -r "$TMP" ;;
    *) [ -z "$(ls -A "$TMP")" ] && rm -r "$TMP"; exit 1 ;;
