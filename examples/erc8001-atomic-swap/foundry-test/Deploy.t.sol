@@ -306,6 +306,36 @@ contract DeployTest {
         requireUnswapped(x);
     }
 
+    // OpenZeppelin < 4.7.3 ECDSA.recover(bytes32, bytes) also accepted the
+    // 64-byte EIP-2098 compact form of a signature (CVE-2022-35961), so one
+    // signature had two valid encodings. The vendored 4.7.3 ECDSA accepts
+    // only the 65-byte form: the compact encoding of Alice's valid
+    // signature must be rejected.
+    function test_compactSignatureRejected() public {
+        Ctx memory x = setUpSwap(true);
+        bytes32 r;
+        bytes32 s_;
+        uint8 v;
+        bytes memory sig = x.sigA;
+        assembly {
+            r := mload(add(sig, 0x20))
+            s_ := mload(add(sig, 0x40))
+            v := byte(0, mload(add(sig, 0x60)))
+        }
+        bytes32 vs = bytes32(uint256(s_) | (uint256(v - 27) << 255));
+        bytes memory compact = abi.encodePacked(r, vs);
+        require(compact.length == 64, "compact encoding");
+        (bool ok, ) = x.companion.call(abi.encodeCall(IAdapter.proposeSwap, (
+            x.expiryA, x.nonceA, x.alice, x.bob,
+            address(x.tokenA), AMOUNT_A, address(x.tokenB), AMOUNT_B, compact)));
+        require(!ok, "compact signature accepted");
+        // The canonical 65-byte signature still works.
+        propose(x);
+        accept(x);
+        execute(x);
+        requireSwapped(x);
+    }
+
     // The final step is bound to partyB; nobody else may drive it.
     function test_onlyPartyBCanExecute() public {
         Ctx memory x = setUpSwap(true);

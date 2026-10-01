@@ -27,7 +27,9 @@
 
 // Deploys a fresh ERC1155Wrapped companion with the given metadata URI
 // (e.g. 'https://example.test/{id}.json'). The deploying contract becomes
-// `admin` in the companion, so only it may mint/burn.
+// `admin` in the companion, so only it may mint. Burning needs the holder
+// or an operator the holder approved, so `burn` called from Reach only
+// works after the holder approves the Reach contract via setApprovalForAll.
 //
 // ContractCode is constructed here, inside the function, rather than as a
 // top-level export -- constructed at module-load time (before the

@@ -42,10 +42,11 @@ real OpenZeppelin `ERC1155.sol` as a companion contract and calls it through
   supply per id is conserved across transfers" -- OZ's base `ERC1155` doesn't
   track total supply (that's the separate `ERC1155Supply` extension, not
   vendored here), and no such property is asserted in Solidity.
-- **The admin can burn anyone's tokens.** `ERC1155Wrapped.burn` lets
-  `admin` (the Reach contract) burn from any holder without approval. This
-  example never calls `burn`, but an app that exposes it through
-  `erc1155.rsh` gives its consensus logic that power over every holder.
+- **Burning needs the holder's consent.** `ERC1155Wrapped.burn` accepts
+  only the holder or an operator the holder approved with
+  `setApprovalForAll`; the admin (the Reach contract) has no special burn
+  power, so a Reach program built on `erc1155.rsh` can burn a holder's
+  tokens only after that holder approves the Reach contract.
 - **`mint`/`burn` results are `havoc` to Z3.** Only `mint`'s `amount > 0` and
   `safeTransferFrom`'s `from != to` are non-trivial `Refine` preconditions;
   every other call result is recorded as an explicit boundary assumption in

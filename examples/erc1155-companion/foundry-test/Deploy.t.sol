@@ -20,6 +20,10 @@ interface IERC1155Balance {
     function balanceOf(address account, uint256 id) external view returns (uint256);
 }
 
+interface IERC1155Burn {
+    function burn(address from, uint256 id, uint256 amount) external;
+}
+
 contract DeployTest {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
@@ -66,5 +70,18 @@ contract DeployTest {
 
         uint256 bal = IERC1155Balance(companion).balanceOf(address(this), tokenId);
         require(bal == amount, "balance not minted");
+
+        // Burning needs the holder's consent: neither the admin (the Reach
+        // contract) nor a stranger may burn this holder's tokens...
+        vm.prank(address(c));
+        (bool okAdmin, ) = companion.call(abi.encodeCall(IERC1155Burn.burn, (address(this), tokenId, 1)));
+        require(!okAdmin, "admin burned a holder's tokens without approval");
+        vm.prank(address(0xBEEF));
+        (bool okStranger, ) = companion.call(abi.encodeCall(IERC1155Burn.burn, (address(this), tokenId, 1)));
+        require(!okStranger, "stranger burned a holder's tokens");
+
+        // ...but the holder may burn its own.
+        IERC1155Burn(companion).burn(address(this), tokenId, 1);
+        require(IERC1155Balance(companion).balanceOf(address(this), tokenId) == amount - 1, "holder burn failed");
     }
 }

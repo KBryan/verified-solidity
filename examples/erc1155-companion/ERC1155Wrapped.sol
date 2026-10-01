@@ -10,9 +10,11 @@ import "./token/ERC1155/ERC1155.sol";
 // level is explicitly lowered via --companion-check.
 //
 // `admin` is fixed to the deployer, which is the Reach-generated contract
-// itself (Reach deploys this via `new Contract(...)`) -- so mint/burn are
-// only reachable through the paired Reach consensus program, not by
-// arbitrary externally-owned accounts.
+// itself (Reach deploys this via `new Contract(...)`) -- so minting is only
+// reachable through the paired Reach consensus program, not by arbitrary
+// externally-owned accounts. Burning is NOT an admin power: like a
+// transfer, it needs the holder or an operator the holder approved, so the
+// Reach program cannot confiscate anyone's balance.
 contract ERC1155Wrapped is ERC1155 {
   address public immutable admin;
 
@@ -26,7 +28,7 @@ contract ERC1155Wrapped is ERC1155 {
   }
 
   function burn(address from, uint256 id, uint256 amount) external {
-    require(msg.sender == admin || isApprovedForAll(from, msg.sender) || from == msg.sender);
+    require(from == msg.sender || isApprovedForAll(from, msg.sender));
     _burn(from, id, amount);
   }
 }
