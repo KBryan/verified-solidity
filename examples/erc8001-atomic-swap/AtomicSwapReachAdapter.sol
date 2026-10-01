@@ -93,11 +93,28 @@ contract AtomicSwapReachAdapter is AtomicSwap {
     return uint64(v);
   }
 
-  // Alice (the proposer) signs the AgentIntent off-chain via EIP-712 against
-  // this contract's domain ({name: "ERC-8001", version: "1"}, this chain id,
-  // this contract's address) before calling proposeSwap. Per ERC8001, the
-  // proposer auto-accepts if listed as a participant (they always are here),
-  // so no separate acceptSwap call is needed for partyA.
+  // The EIP-712 struct hash ERC8001 keys coordinations by. Exposed so that
+  // proposeSwap can reuse ERC8001's own `_hashIntent` (which takes calldata)
+  // via an external self-call, instead of re-implementing the hashing.
+  function intentHashOf(AgentIntent calldata intent) external pure returns (bytes32) {
+    return _hashIntent(intent);
+  }
+
+  // Alice (the proposer, partyA) signs the AgentIntent off-chain via EIP-712
+  // against this contract's domain ({name: "ERC-8001", version: "1"}, this
+  // chain id, this contract's address) before calling proposeSwap. Per
+  // ERC8001, the proposer auto-accepts if listed as a participant (they
+  // always are here), so no separate acceptSwap call is needed for partyA.
+  //
+  // ERC8001 requires the participants array strictly ascending by address,
+  // so it is sorted here; AtomicSwap pays out by proposer (agentId), not by
+  // array position, so either address order works. The signed intent must
+  // list the participants in this sorted order.
+  //
+  // Idempotent: Alice's signature is public once her transaction is in the
+  // mempool, so anyone can submit this exact intent first. If it is already
+  // registered (in any state), this returns its hash instead of reverting,
+  // so a front-run cannot stall the Reach program's propose step.
   function proposeSwap(
     uint256 expiry,
     uint256 nonce,
@@ -109,11 +126,11 @@ contract AtomicSwapReachAdapter is AtomicSwap {
     uint256 amountB,
     bytes calldata signatureA
   ) external returns (bytes32 intentHash) {
-    require(uint160(partyA) < uint160(partyB), "participants not ascending");
+    require(partyA != partyB, "participants must differ");
 
     address[] memory participants = new address[](2);
-    participants[0] = partyA;
-    participants[1] = partyB;
+    (participants[0], participants[1]) =
+      uint160(partyA) < uint160(partyB) ? (partyA, partyB) : (partyB, partyA);
 
     CoordinationPayload memory payload = _buildPayload(tokenA, amountA, tokenB, amountB);
     bytes32 payloadHash = keccak256(abi.encode(
@@ -135,6 +152,10 @@ contract AtomicSwapReachAdapter is AtomicSwap {
       participants: participants
     });
 
+    intentHash = this.intentHashOf(intent);
+    if (_coordinations[intentHash].status != Status.None) {
+      return intentHash;
+    }
     intentHash = this.proposeCoordination(intent, signatureA, payload);
   }
 
@@ -147,6 +168,14 @@ contract AtomicSwapReachAdapter is AtomicSwap {
 
   // Anyone may call this once the swap is Ready. Reconstructs the same
   // deterministic payload built in proposeSwap so payloadHash matches.
+  //
+  // So that the Reach program driving this adapter can always finish, this
+  // only reverts while the swap may still execute (Proposed and awaiting
+  // acceptance, or Ready but blocked, e.g. by a missing token approval).
+  // Otherwise it reports the outcome:
+  //  - Executed (e.g. someone called executeCoordination directly): true;
+  //  - Cancelled, expired, or never proposed: false, transferring nothing.
+  //
   // Returns only `bool success`, not the full (bool, bytes) pair
   // executeCoordination itself returns -- AtomicSwap's own execution hook
   // always returns empty result bytes on success, so there's nothing
@@ -166,6 +195,13 @@ contract AtomicSwapReachAdapter is AtomicSwap {
     address tokenB,
     uint256 amountB
   ) external returns (bool success) {
+    CoordinationState storage coord = _coordinations[intentHash];
+    if (coord.status == Status.Executed) {
+      return true;
+    }
+    if (coord.status == Status.None || coord.status == Status.Cancelled || coord.expiry <= block.timestamp) {
+      return false;
+    }
     CoordinationPayload memory payload = _buildPayload(tokenA, amountA, tokenB, amountB);
     (success, ) = this.executeCoordination(intentHash, payload, "");
   }

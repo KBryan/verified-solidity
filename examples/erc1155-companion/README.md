@@ -3,10 +3,15 @@
 Reach + a vendored OpenZeppelin ERC1155, verified together via the
 [verified-Solidity companion contract](../verified-solidity-interop/) workflow.
 
-Admin deploys `ERC1155Wrapped` (`oz/ERC1155Wrapped.sol`, a thin
+Admin deploys `ERC1155Wrapped` (`ERC1155Wrapped.sol`, a thin
 deployer-gated wrapper around OpenZeppelin 4.5.0's `ERC1155.sol`, vendored
-verbatim under `oz/`), mints `amount` units of token `id` to Recipient, and
-Recipient reads back its balance.
+verbatim under `token/` and `utils/`) and names a recipient. That recipient,
+bound as the Recipient participant so nobody else can claim the mint,
+triggers the mint of `amount` units of token `tokenId` to itself and is
+shown its balance.
+
+The vendored OpenZeppelin files are MIT-licensed; see
+[`LICENSE-OpenZeppelin`](LICENSE-OpenZeppelin).
 
 ## Why a companion, not a native primitive
 
@@ -37,6 +42,10 @@ real OpenZeppelin `ERC1155.sol` as a companion contract and calls it through
   supply per id is conserved across transfers" -- OZ's base `ERC1155` doesn't
   track total supply (that's the separate `ERC1155Supply` extension, not
   vendored here), and no such property is asserted in Solidity.
+- **The admin can burn anyone's tokens.** `ERC1155Wrapped.burn` lets
+  `admin` (the Reach contract) burn from any holder without approval. This
+  example never calls `burn`, but an app that exposes it through
+  `erc1155.rsh` gives its consensus logic that power over every holder.
 - **`mint`/`burn` results are `havoc` to Z3.** Only `mint`'s `amount > 0` and
   `safeTransferFrom`'s `from != to` are non-trivial `Refine` preconditions;
   every other call result is recorded as an explicit boundary assumption in
@@ -57,14 +66,14 @@ default under `--sol`) treats anything short of `proven` as fatal, so it
 cannot pass here; this is a hard limit of what solc's SMTChecker can decide
 for real-world OpenZeppelin code today, not a bug in this example.
 
-Worse for routine use: the real `reach sol` companion-check path has **no
-configurable timeout** (`ETH_SolCheck.hs` hardcodes it to 0 = unbounded; there
-is no `--companion-check-timeout` flag), so an actual `--companion-check warn`
-run can take an unpredictable, possibly very long time per compile rather than
-the bounded ~7 minutes measured above. For that reason `make run` below
-compiles with `--companion-check off` by default. Run `--companion-check warn`
-yourself if you want the informational SMTChecker report and are prepared for
-a long-running, unbounded compile.
+The companion check's per-query SMTChecker timeout is the compiler's
+`--verify-timeout` (milliseconds per query, default 120000), so a
+`--companion-check warn` run over this closure takes on the order of the
+~7 minutes measured above, or longer at the default timeout. To keep routine
+compiles fast, `make run` below compiles with `--companion-check off`, which
+means **this example's companion is not SMTChecker-analyzed at all by
+default**: only the Z3 layer applies. Run `--companion-check warn` yourself
+for the informational SMTChecker report.
 
 ## Run
 
@@ -74,9 +83,8 @@ make run
 REACH_DOCKER=0 ../../reach sol index.rsh --companion-check off
 ./foundry-test/run.sh   # optional; needs forge
 
-# Optional, and can run for a long time (no timeout bound in this repo's
-# companion-check pipeline as of this writing):
-REACH_DOCKER=0 ../../reach sol index.rsh --companion-check warn
+# Optional, and slow; --verify-timeout bounds each SMTChecker query (ms):
+REACH_DOCKER=0 ../../reach sol index.rsh --companion-check warn --verify-timeout 30000
 ```
 
 Artifacts land in `build/`:

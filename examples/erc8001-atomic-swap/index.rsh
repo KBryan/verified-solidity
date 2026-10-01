@@ -35,15 +35,18 @@
 // `remote()` safely.
 // If Bob's accept hasn't happened yet, the executeSwap `remote()` call
 // below simply fails (AtomicSwap's own ERC8001_NotReady), same as any
-// other companion precondition violation.
+// other companion precondition violation, and Bob can retry later. Once the
+// swap is executed (by anyone), cancelled, or expired, executeSwap instead
+// returns its outcome without reverting, so this program can always finish.
 //
 // Alice deploys the adapter, then signs an AgentIntent off-chain (EIP-712,
 // domain {name:"ERC-8001", version:"1", chainId, verifyingContract:adapter})
 // proposing to swap `amountA` of `tokenA` for `amountB` of `tokenB` with
 // Bob, and publishes it on-chain via proposeSwap. Bob then (out of band,
 // see above) reviews the terms, signs an AcceptanceAttestation, and calls
-// acceptCoordination on the companion himself. Once that's landed, Bob (or anyone;
-// this program has Bob do it) triggers execution through this program.
+// acceptCoordination on the companion himself. Once that's landed, Bob
+// (bound to `partyB` below) triggers execution through this program; anyone
+// may also execute directly on the adapter, which this program tolerates.
 //
 // Approval is also NOT handled by this program, for a related but distinct
 // reason: ERC-8001's signatures establish *agreement*, not fund custody, so
@@ -81,15 +84,13 @@
 // exercise an actual ethers/viem signing flow, which is outside what this
 // environment can run end-to-end.
 //
-// Redundant consensus, stated plainly: Reach's own participant/consensus
-// model already guarantees Alice and Bob agree before anything publishes.
-// Layering ERC-8001's independent signature-based propose/accept/execute on
-// top answers the same "did both parties agree" question twice, through two
-// mechanisms that don't know about each other -- and, per the finding
-// above, the "accept" leg can't even run through Reach's own consensus
-// mechanism. That's legitimate here as a demonstration of ERC-8001
-// compliance (the actual point of this example), not as added security
-// against a Reach-level attacker.
+// Where agreement actually comes from, stated plainly: Bob never publishes
+// any terms into this Reach program -- Alice alone chooses and publishes
+// them. Reach only sequences the steps and restricts the final one to
+// `partyB`. Bob's agreement to the terms is established solely by his
+// ERC-8001 AcceptanceAttestation (signed over the intent hash, which
+// commits to every term), checked by the companion at runtime. Reach adds
+// orchestration here, not a second layer of consent.
 //
 // Verification layers (see docs/src/guide/verified-solidity-interop/):
 //  1. Z3 proves this program's orchestration and the trivial Refine
@@ -139,6 +140,8 @@ export const main = Reach.App(() => {
   Alice.publish(partyB, tokenA, amountA, tokenB, amountB);
   require(amountA > 0 && amountB > 0);
   require(partyB != Alice);
+  // Only the counterparty named in the terms may drive the final step.
+  Bob.set(partyB);
   commit();
 
   Alice.only(() => {

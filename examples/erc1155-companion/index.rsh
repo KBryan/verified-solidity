@@ -4,9 +4,10 @@ import { deployERC1155, ERC1155Interface } from './erc1155.rsh';
 
 // Reach + a vendored OpenZeppelin ERC1155 companion, verified together.
 //
-// Admin deploys an ERC1155Wrapped token (oz/ERC1155Wrapped.sol) and mints
-// `amt` units of a single token `id` to Recipient; Recipient then reads
-// back its balance. Three verification layers apply (see
+// Admin deploys an ERC1155Wrapped token (ERC1155Wrapped.sol) and names a
+// recipient; that recipient (bound as the Recipient participant, so nobody
+// else can claim the mint) triggers the mint of `amount` units of a single
+// token `tokenId` to itself and is shown the resulting balance. Three verification layers apply (see
 // docs/src/guide/verified-solidity-interop/):
 //  1. Z3 verifies this program's orchestration and proves the Refine
 //     preconditions of every companion call (erc1155.rsh) at the call site.
@@ -17,9 +18,10 @@ import { deployERC1155, ERC1155Interface } from './erc1155.rsh';
 //     total supply (that's the separate ERC1155Supply extension, not
 //     vendored here), and no cross-call property is asserted in Solidity.
 //  3. Every companion call result is otherwise `havoc` (unconstrained) to
-//     Z3; recorded explicitly in vr_assumptions. This example's final
-//     `balanceOf` check below is a *runtime*-enforced sanity check on the
-//     actual companion state, not something Z3 proves ahead of time.
+//     Z3; recorded explicitly in vr_assumptions. In particular, the
+//     `balanceOf` value reported to Recipient below is neither proven nor
+//     checked: it is whatever the companion returns, passed through to the
+//     frontend for display.
 
 export const main = Reach.App(() => {
   setOptions({ connectors: [ETH] });
@@ -28,6 +30,7 @@ export const main = Reach.App(() => {
     uri: StringDyn,
     tokenId: UInt,
     amount: UInt,
+    recipient: Address,
     ready: Fun([], Null),
   });
   const Recipient = Participant('Recipient', {
@@ -41,10 +44,14 @@ export const main = Reach.App(() => {
     const uri = declassify(interact.uri);
     const tokenId = declassify(interact.tokenId);
     const amount = declassify(interact.amount);
+    const recipient = declassify(interact.recipient);
     assume(amount > 0);
   });
-  Admin.publish(uri, tokenId, amount);
+  Admin.publish(uri, tokenId, amount, recipient);
   require(amount > 0);
+  // Without this, whoever published the Recipient step first would become
+  // Recipient and receive the mint.
+  Recipient.set(recipient);
   commit();
 
   Admin.only(() => {

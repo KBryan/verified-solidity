@@ -27,8 +27,8 @@ hs/test/Reach/Closed
 .idea/modules.xml
 .idea/reach-lang.iml
 .idea/vcs.xml
-examples/verified-solidity/foundry-test/scratch
-examples/verified-solidity-interop/foundry-test/scratch
+# Foundry scratch projects created by examples/*/foundry-test/run.sh
+examples/*/foundry-test/scratch
 # solc standard-json debug dumps written next to ContractCode .sol sources
 *.sol.solc.json
 

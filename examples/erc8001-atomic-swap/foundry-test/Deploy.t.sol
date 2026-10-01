@@ -25,6 +25,19 @@ interface Vm {
     function addr(uint256 privateKey) external returns (address);
     function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);
     function prank(address) external;
+    function warp(uint256) external;
+}
+
+// The adapter's own entry points, called directly (not through Reach) to
+// simulate third parties front-running or executing out of band.
+interface IAdapter {
+    function proposeSwap(
+        uint256 expiry, uint256 nonce, address partyA, address partyB,
+        address tokenA, uint256 amountA, address tokenB, uint256 amountB,
+        bytes calldata signatureA
+    ) external returns (bytes32);
+    function executeSwap(bytes32 intentHash, address tokenA, uint256 amountA, address tokenB, uint256 amountB)
+        external returns (bool);
 }
 
 interface IERC8001Constants {
@@ -81,6 +94,25 @@ contract MockERC20 {
 contract DeployTest {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
+    uint256 constant AMOUNT_A = 100e18;
+    uint256 constant AMOUNT_B = 5e16;
+
+    // One swap's worth of state, threaded through the step helpers below.
+    struct Ctx {
+        uint256 alicePk;
+        address alice;
+        uint256 bobPk;
+        address bob;
+        MockERC20 tokenA;
+        MockERC20 tokenB;
+        ReachContract c;
+        address companion;
+        uint64 expiryA;
+        uint64 nonceA;
+        bytes32 intentStructHash;
+        bytes sigA;
+    }
+
     function computeCreateAddress(address deployer, uint256 nonce) internal pure returns (address) {
         require(nonce >= 1 && nonce <= 127, "nonce out of supported range");
         return address(uint160(uint256(keccak256(abi.encodePacked(
@@ -118,99 +150,171 @@ contract DeployTest {
         ));
     }
 
-    function test_roundtrip() public {
-        // Pick two private keys and assign alice/bob so alice's address is
-        // strictly smaller -- ERC-8001 requires participants strictly
-        // ascending by uint160(address), and AtomicSwapReachAdapter
-        // enforces partyA (agentId, always Alice here) < partyB.
+    // Two fixed keys, assigned so Alice's address is lower or higher than
+    // Bob's. The adapter used to require partyA < partyB, which stalled the
+    // swap for about half of all address pairs; both orders must work.
+    function setUpSwap(bool aliceLower) internal returns (Ctx memory x) {
         uint256 pkX = 0xA11CE;
         uint256 pkY = 0xB0B;
         address addrX = vm.addr(pkX);
         address addrY = vm.addr(pkY);
-        (uint256 alicePk, address alice, uint256 bobPk, address bob) =
-            addrX < addrY ? (pkX, addrX, pkY, addrY) : (pkY, addrY, pkX, addrX);
+        bool xLower = addrX < addrY;
+        (x.alicePk, x.alice, x.bobPk, x.bob) =
+            (xLower == aliceLower) ? (pkX, addrX, pkY, addrY) : (pkY, addrY, pkX, addrX);
+        require((x.alice < x.bob) == aliceLower, "key ordering setup");
 
-        MockERC20 tokenA = new MockERC20();
-        MockERC20 tokenB = new MockERC20();
-        uint256 amountA = 100e18;
-        uint256 amountB = 5e16;
-        tokenA.mint(alice, amountA);
-        tokenB.mint(bob, amountB);
+        x.tokenA = new MockERC20();
+        x.tokenB = new MockERC20();
+        x.tokenA.mint(x.alice, AMOUNT_A);
+        x.tokenB.mint(x.bob, AMOUNT_B);
 
         // Step 1 (constructor): Alice deploys, publishing the swap terms.
-        vm.prank(alice);
-        ReachContract c = new ReachContract(T0(0, payable(bob), payable(address(tokenA)), amountA, payable(address(tokenB)), amountB));
-        require(address(c).code.length > 0, "no code at deployed address");
+        vm.prank(x.alice);
+        x.c = new ReachContract(T0(0, payable(x.bob), payable(address(x.tokenA)), AMOUNT_A, payable(address(x.tokenB)), AMOUNT_B));
+        require(address(x.c).code.length > 0, "no code at deployed address");
 
         // Step 2: Alice's second publish deploys the AtomicSwapReachAdapter.
-        vm.prank(alice);
-        c._reachp_1(T2(0));
-        address companion = computeCreateAddress(address(c), 1);
-        require(companion.code.length > 0, "companion not deployed");
+        vm.prank(x.alice);
+        x.c._reachp_1(T2(0));
+        x.companion = computeCreateAddress(address(x.c), 1);
+        require(x.companion.code.length > 0, "companion not deployed");
 
-        IERC8001Constants k = IERC8001Constants(companion);
-        bytes32 swapType = k.SWAP_TYPE();
-        bytes32 payloadHash = buildPayloadHash(swapType, address(tokenA), amountA, address(tokenB), amountB);
-
-        // Step 3: Alice signs the AgentIntent (real EIP-712 digest, real
-        // ECDSA signature) and approves the adapter for tokenA, then
-        // publishes -- the consensus step calls proposeSwap.
-        uint64 expiryA = uint64(block.timestamp + 1 hours);
-        uint64 nonceA = 1;
+        // Alice signs the AgentIntent (real EIP-712 digest, real ECDSA
+        // signature). Participants are sorted ascending, as ERC8001 requires
+        // and as the adapter builds them.
+        IERC8001Constants k = IERC8001Constants(x.companion);
+        bytes32 payloadHash = buildPayloadHash(k.SWAP_TYPE(), address(x.tokenA), AMOUNT_A, address(x.tokenB), AMOUNT_B);
+        x.expiryA = uint64(block.timestamp + 1 hours);
+        x.nonceA = 1;
         address[] memory participants = new address[](2);
-        participants[0] = alice;
-        participants[1] = bob;
-        bytes32 intentStructHash = hashIntent(
-            k.AGENT_INTENT_TYPEHASH(), payloadHash, expiryA, nonceA, alice, swapType, participants);
-        bytes32 intentDigest = typedDataHash(k.DOMAIN_SEPARATOR(), intentStructHash);
-        (uint8 vA, bytes32 rA, bytes32 sA) = vm.sign(alicePk, intentDigest);
-        bytes memory sigA = abi.encodePacked(rA, sA, vA);
+        (participants[0], participants[1]) = x.alice < x.bob ? (x.alice, x.bob) : (x.bob, x.alice);
+        x.intentStructHash = hashIntent(
+            k.AGENT_INTENT_TYPEHASH(), payloadHash, x.expiryA, x.nonceA, x.alice, k.SWAP_TYPE(), participants);
+        (uint8 vA, bytes32 rA, bytes32 sA) = vm.sign(x.alicePk, typedDataHash(k.DOMAIN_SEPARATOR(), x.intentStructHash));
+        x.sigA = abi.encodePacked(rA, sA, vA);
 
-        vm.prank(alice);
-        tokenA.approve(companion, amountA);
+        vm.prank(x.alice);
+        x.tokenA.approve(x.companion, AMOUNT_A);
+    }
 
-        vm.prank(alice);
-        c._reachp_2(T4(0, expiryA, nonceA, sigA));
+    // Step 3: Alice publishes the signed intent; the consensus step calls proposeSwap.
+    function propose(Ctx memory x) internal {
+        vm.prank(x.alice);
+        x.c._reachp_2(T4(0, x.expiryA, x.nonceA, x.sigA));
+    }
 
-        // Step 4 (out of band, not through Reach -- see header comment):
-        // Bob signs the AcceptanceAttestation and calls acceptCoordination
-        // on the companion directly himself, so msg.sender ==
-        // attestation.participant as ERC8001 requires.
+    // Step 4 (out of band, not through Reach -- see header comment): Bob
+    // signs the AcceptanceAttestation and calls acceptCoordination on the
+    // companion directly, so msg.sender == attestation.participant, then
+    // approves the adapter for tokenB.
+    function accept(Ctx memory x) internal {
+        IERC8001Constants k = IERC8001Constants(x.companion);
         uint64 expiryB = uint64(block.timestamp + 1 hours);
-        uint64 nonceB = 1;
         // attestation.intentHash is the intent's *struct* hash (per
         // IERC8001 docs: "getIntentHash(intent) -- the struct hash, not the
         // digest"), i.e. intentStructHash, not the EIP-712 digest we signed.
         bytes32 acceptStructHash = hashAttestation(
-            k.ACCEPTANCE_TYPEHASH(), intentStructHash, bob, nonceB, expiryB, bytes32(0));
-        bytes32 acceptDigest = typedDataHash(k.DOMAIN_SEPARATOR(), acceptStructHash);
-        (uint8 vB, bytes32 rB, bytes32 sB) = vm.sign(bobPk, acceptDigest);
-        bytes memory sigB = abi.encodePacked(rB, sB, vB);
+            k.ACCEPTANCE_TYPEHASH(), x.intentStructHash, x.bob, 1, expiryB, bytes32(0));
+        (uint8 vB, bytes32 rB, bytes32 sB) = vm.sign(x.bobPk, typedDataHash(k.DOMAIN_SEPARATOR(), acceptStructHash));
 
-        vm.prank(bob);
-        bool allAccepted = IERC8001Accept(companion).acceptCoordination(
-            intentStructHash,
+        vm.prank(x.bob);
+        bool allAccepted = IERC8001Accept(x.companion).acceptCoordination(
+            x.intentStructHash,
             AcceptanceAttestation({
-                intentHash: intentStructHash,
-                participant: bob,
-                nonce: nonceB,
+                intentHash: x.intentStructHash,
+                participant: x.bob,
+                nonce: 1,
                 expiry: expiryB,
                 conditionsHash: bytes32(0),
-                signature: sigB
+                signature: abi.encodePacked(rB, sB, vB)
             }));
         require(allAccepted, "accept did not complete coordination");
 
-        // Step 5: Bob approves the adapter for tokenB, then publishes into
-        // Reach again -- the consensus step calls executeSwap.
-        vm.prank(bob);
-        tokenB.approve(companion, amountB);
+        vm.prank(x.bob);
+        x.tokenB.approve(x.companion, AMOUNT_B);
+    }
 
-        vm.prank(bob);
-        c._reachp_3(T2(0));
+    // Step 5: Bob publishes into Reach again; the consensus step calls executeSwap.
+    function execute(Ctx memory x) internal {
+        vm.prank(x.bob);
+        x.c._reachp_3(T2(0));
+    }
 
-        require(tokenA.balanceOf(bob) == amountA, "tokenA not delivered to bob");
-        require(tokenB.balanceOf(alice) == amountB, "tokenB not delivered to alice");
-        require(tokenA.balanceOf(alice) == 0, "alice still holds tokenA");
-        require(tokenB.balanceOf(bob) == 0, "bob still holds tokenB");
+    function requireSwapped(Ctx memory x) internal view {
+        require(x.tokenA.balanceOf(x.bob) == AMOUNT_A, "tokenA not delivered to bob");
+        require(x.tokenB.balanceOf(x.alice) == AMOUNT_B, "tokenB not delivered to alice");
+        require(x.tokenA.balanceOf(x.alice) == 0, "alice still holds tokenA");
+        require(x.tokenB.balanceOf(x.bob) == 0, "bob still holds tokenB");
+    }
+
+    function requireUnswapped(Ctx memory x) internal view {
+        require(x.tokenA.balanceOf(x.alice) == AMOUNT_A, "alice lost tokenA");
+        require(x.tokenB.balanceOf(x.bob) == AMOUNT_B, "bob lost tokenB");
+    }
+
+    function test_roundtrip_aliceLower() public {
+        Ctx memory x = setUpSwap(true);
+        propose(x);
+        accept(x);
+        execute(x);
+        requireSwapped(x);
+    }
+
+    function test_roundtrip_aliceHigher() public {
+        Ctx memory x = setUpSwap(false);
+        propose(x);
+        accept(x);
+        execute(x);
+        requireSwapped(x);
+    }
+
+    // A third party replays Alice's public signature into the adapter before
+    // her Reach step lands; the Reach step must still succeed.
+    function test_frontRunProposeDoesNotStall() public {
+        Ctx memory x = setUpSwap(true);
+        vm.prank(address(0xBEEF));
+        IAdapter(x.companion).proposeSwap(
+            x.expiryA, x.nonceA, x.alice, x.bob,
+            address(x.tokenA), AMOUNT_A, address(x.tokenB), AMOUNT_B, x.sigA);
+        propose(x);
+        accept(x);
+        execute(x);
+        requireSwapped(x);
+    }
+
+    // A third party executes the swap directly on the adapter; Bob's Reach
+    // step must still complete instead of reverting forever.
+    function test_directExecutionDoesNotStall() public {
+        Ctx memory x = setUpSwap(false);
+        propose(x);
+        accept(x);
+        vm.prank(address(0xBEEF));
+        require(
+            IAdapter(x.companion).executeSwap(x.intentStructHash, address(x.tokenA), AMOUNT_A, address(x.tokenB), AMOUNT_B),
+            "direct execution failed");
+        execute(x);
+        requireSwapped(x);
+    }
+
+    // Bob never accepts; once the intent expires, Bob's Reach step finishes
+    // the program without moving any tokens.
+    function test_expiredSwapFinishesWithoutTransfer() public {
+        Ctx memory x = setUpSwap(true);
+        propose(x);
+        vm.warp(uint256(x.expiryA) + 1);
+        execute(x);
+        requireUnswapped(x);
+    }
+
+    // The final step is bound to partyB; nobody else may drive it.
+    function test_onlyPartyBCanExecute() public {
+        Ctx memory x = setUpSwap(true);
+        propose(x);
+        accept(x);
+        vm.prank(address(0xBEEF));
+        (bool ok, ) = address(x.c).call(abi.encodeCall(ReachContract._reachp_3, (T2(0))));
+        require(!ok, "non-partyB caller drove the final step");
+        execute(x);
+        requireSwapped(x);
     }
 }

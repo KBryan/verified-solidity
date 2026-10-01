@@ -8,7 +8,11 @@ EIP-712-signed coordination; its "Hello World" is `AtomicSwap`, a trustless
 two-party token swap, vendored here from
 [github.com/KBryan/erc8001atomicswap](https://github.com/KBryan/erc8001atomicswap)
 (MIT-licensed per its per-file SPDX headers; the upstream repo has no
-repo-level LICENSE file at the time of writing).
+repo-level LICENSE file at the time of writing, and the vendored copy is not
+pinned to an upstream commit). ERC-8001 is a proposed standard, not a final
+one; check the EIP page for its current status before relying on it. The
+vendored OpenZeppelin files under `oz/` are MIT-licensed; see
+[`oz/LICENSE`](oz/LICENSE).
 
 Alice deploys `AtomicSwapReachAdapter.sol` (a thin, hand-written wrapper
 around the vendored `AtomicSwap`/`ERC8001`/`IERC8001` contracts -- see that
@@ -17,6 +21,37 @@ EIP-712, and publishes it on-chain via `proposeSwap`. Bob reviews, signs an
 `AcceptanceAttestation`, and calls `acceptCoordination` on the companion
 **directly** (not through Reach -- see below). Once accepted, Bob triggers
 `executeSwap` through Reach, which atomically moves both tokens.
+
+## What Reach does and does not add
+
+Alice alone chooses and publishes the swap terms; Bob never publishes any
+terms into the Reach program. His agreement comes solely from his ERC-8001
+`AcceptanceAttestation`, which signs the intent hash (committing to every
+term) and is checked by the companion at runtime. Reach sequences the steps
+and restricts the final one to the named counterparty (`partyB`), but it is
+not a second layer of consent.
+
+## Liveness: the program always finishes
+
+Neither party escrows funds in the Reach contract, so a stuck program loses
+nothing, but the adapter is written so the program can always finish:
+
+- **Either address order works.** The adapter sorts the two participants
+  (ERC-8001 requires them ascending); the swap pays out by proposer, not by
+  position.
+- **Front-running the proposal is harmless.** Alice's signature is public
+  once her transaction is pending, so anyone can submit her exact intent
+  first. `proposeSwap` then returns the existing intent hash instead of
+  reverting.
+- **Execution outside Reach is tolerated.** Anyone may execute the swap
+  directly on the adapter; Bob's Reach step then reports success.
+- **Cancellation and expiry end the program.** If Alice cancels, or the
+  intent expires (for example because Bob never accepts), Bob's final step
+  returns `false` without transferring anything.
+
+`executeSwap` still reverts while the swap could yet execute (Bob has not
+accepted, or a token approval is missing), so Bob can retry until it
+succeeds or the intent expires.
 
 ## Two real, load-bearing findings from actually running this, not just reading the spec
 
@@ -53,13 +88,14 @@ As with `erc1155-companion`, `--companion-check require` (the default under
 `--sol`) is not achievable here: this compiled closure is much larger than
 the trivial `Vault.sol` case -- the adapter plus `AtomicSwap` + `ERC8001` +
 `IERC8001` + 7 vendored OpenZeppelin files, including `ecrecover`-based
-signature verification and loops over the participants array. The real
-`reach sol` companion-check path has **no configurable timeout**
-(`ETH_SolCheck.hs` hardcodes it to unbounded; there is no
-`--companion-check-timeout` flag), so `make run` below compiles with
-`--companion-check off` by default, same as `erc1155-companion` and for the
-same reason. Run `--companion-check warn` yourself for the informational
-SMTChecker report if you're prepared for a long, unbounded compile.
+signature verification and loops over the participants array. Each
+SMTChecker query is bounded by the compiler's `--verify-timeout`
+(milliseconds, default 120000), but over a closure this size a
+`--companion-check warn` run is still slow, so `make run` below compiles
+with `--companion-check off`, same as `erc1155-companion`. That means **this
+example's companion is not SMTChecker-analyzed at all by default**: only the
+Z3 layer applies. Run `--companion-check warn` yourself for the
+informational SMTChecker report.
 
 ## Run
 
@@ -74,7 +110,10 @@ REACH_DOCKER=0 ../../reach sol index.rsh --companion-check off
 EIP-712 digests (computed the same way `ERC8001.sol` computes them), real
 ECDSA signatures via `vm.sign`, Bob's direct `acceptCoordination` call, and
 Reach-orchestrated deploy/propose/execute -- confirmed by asserting both
-tokens' balances actually moved between Alice and Bob. It does not exercise
+tokens' balances actually moved between Alice and Bob. It runs that round
+trip with Alice's address both below and above Bob's, and checks each
+liveness case above: a front-run proposal, direct execution, expiry without
+acceptance, and a non-`partyB` caller being rejected. It does not exercise
 an ethers.js/viem `signTypedData` flow; see `index.rsh`'s header comment for
 why that's outside what this environment can run end-to-end.
 
