@@ -1,0 +1,124 @@
+# Gate for pull requests and pushes to main: builds the compiler, runs the
+# unit tests and the verified-Solidity (--sol / companion) golden tests, and
+# deploys the verified-Solidity examples under Foundry.
+#
+# The full golden suite is not run here: ~450 ALGO tests shell out to
+# Algorand's `goal`, which needs the Docker-backed shim described in
+# AGENTS.md. Tests selected below are ETH-only.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verified-solidity:
+    name: Build + verified-Solidity tests
+    # z3's prebuilt release binary targets glibc 2.35 (Ubuntu 22.04).
+    runs-on: ubuntu-22.04
+    # A cold stack build can exceed 30 minutes.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pinned versions from DEPS
+        run: |
+          . ./DEPS
+          {
+            echo "SOLC_VERSION=$SOLC_VERSION"
+            echo "Z3_VERSION=$Z3_VERSION"
+            echo "MO_URL=$MO_URL"
+          } >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install solc
+        run: |
+          curl -fsSL -o "$HOME/.local/bin/solc" \
+            "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux"
+          chmod +x "$HOME/.local/bin/solc"
+
+      - name: Install z3
+        run: |
+          name="z3-${Z3_VERSION}-x64-glibc-2.35"
+          curl -fsSL -o z3.zip \
+            "https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/${name}.zip"
+          unzip -q z3.zip -d "$HOME/z3"
+          rm z3.zip
+          d="$HOME/z3/${name}/bin"
+          ln -s "$d/z3" "$HOME/.local/bin/z3"
+          # solc's SMTChecker loads libz3 dynamically for companion checks.
+          ln -sf libz3.so "$d/libz3.so.4.12"
+          ln -sf libz3.so "$d/libz3.so.4"
+          echo "LD_LIBRARY_PATH=$d" >> "$GITHUB_ENV"
+
+      - name: Install mo
+        run: |
+          curl -fsSL "$MO_URL" -o "$HOME/.local/bin/mo"
+          chmod +x "$HOME/.local/bin/mo"
+
+      - name: Check toolchain versions
+        run: |
+          solc --version | grep -F "Version: ${SOLC_VERSION}+"
+          z3 --version | grep -F "version ${Z3_VERSION}"
+
+      - uses: haskell-actions/setup@v2
+        with:
+          enable-stack: true
+          stack-no-global: true
+
+      - name: Cache stack
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.stack
+            hs/.stack-work
+          key: stack-${{ runner.os }}-${{ hashFiles('hs/stack.yaml', 'hs/stack.yaml.lock', 'hs/package.open.yaml') }}-${{ hashFiles('hs/src/**', 'hs/app/**', 'hs/test/**') }}
+          restore-keys: |
+            stack-${{ runner.os }}-${{ hashFiles('hs/stack.yaml', 'hs/stack.yaml.lock', 'hs/package.open.yaml') }}-
+
+      - name: Generate files (make expand)
+        run: |
+          make -C hs expand
+          # Guard against the mo truncation hazard (see AGENTS.md).
+          test -s hs/src/Reach/Version.hs
+          test -s hs/package.yaml
+          test -s hs/sol/stdlib.sol
+
+      - name: Build compiler and tests
+        run: make -C hs hs-build
+
+      - name: Unit + verified-Solidity golden tests
+        working-directory: hs
+        run: |
+          stack test --fast reach:test:reach-test --test-arguments \
+            "-p '/sol_only/ || /sol_companion/ || /solCheck/ || /companion-check/ || /VerifyReport/ || /reachc --sol/'"
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Compile and deploy verified-Solidity examples
+        env:
+          # Build the emitted .sol with the same solc that reachc used.
+          FOUNDRY_SOLC_VERSION: ${{ env.SOLC_VERSION }}
+        run: |
+          for ex in verified-solidity verified-solidity-interop; do
+            echo "::group::$ex"
+            (
+              cd "examples/$ex"
+              rm -rf build
+              reachc="$(cd ../../hs && stack exec -- which reachc)"
+              "$reachc" --disable-reporting --sol index.rsh
+              python3 -c 'import json,sys; d=json.load(open("build/index.main.verify.json")); sys.exit(0 if d["vr_verified"] else "vr_verified is false")'
+              ./foundry-test/run.sh
+            )
+            echo "::endgroup::"
+          done
