@@ -95,6 +95,7 @@ jobs:
           test -s hs/sol/stdlib.sol
 
       - name: Build compiler and tests
+        id: build
         run: make -C hs hs-build
 
       - name: Unit + verified-Solidity golden tests
@@ -105,20 +106,65 @@ jobs:
           TASTY_PATTERN: /sol_only/ || /sol_companion/ || /solCheck/ || /companion-check/ || /VerifyReport/ || /reachc --sol/
         run: stack test --fast reach:test:reach-test
 
+      # Example programs are golden-tested by compiling each .rsh and
+      # comparing against its .txt. tasty-golden silently creates a missing
+      # .txt and passes, so require it to exist; on failure, regenerate the
+      # missing goldens and upload them for review.
+      - name: Verified-Solidity example goldens
+        working-directory: hs
+        env:
+          TASTY_PATTERN: /verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/
+          TASTY_NO_CREATE: "true"
+        run: stack test --fast reach:test:reach-test
+
+      - name: Generate missing example goldens
+        if: failure()
+        working-directory: hs
+        env:
+          TASTY_PATTERN: /verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/
+        run: |
+          stack test --fast reach:test:reach-test || true
+          cd ..
+          git ls-files --others --exclude-standard -- 'examples/*.txt' > new-goldens.txt
+          cat new-goldens.txt
+          rsync -a --files-from=new-goldens.txt . new-goldens/
+
+      - name: Upload generated goldens
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-goldens
+          path: new-goldens/
+          if-no-files-found: ignore
+
+      # Run even when the golden checks fail, as long as the build
+      # succeeded, so contract regressions are reported in the same run.
       - uses: foundry-rs/foundry-toolchain@v1
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
 
       - name: Compile and deploy verified-Solidity examples
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           # Build the emitted .sol with the same solc that reachc used.
           FOUNDRY_SOLC_VERSION: ${{ env.SOLC_VERSION }}
+        # The ERC examples compile with --companion-check off, as their
+        # Makefiles do: SMTChecker over their OpenZeppelin closures is slow
+        # and cannot reach `require` (see their READMEs).
         run: |
-          for ex in verified-solidity verified-solidity-interop; do
+          for spec in \
+            "verified-solidity:" \
+            "verified-solidity-interop:" \
+            "erc1155-companion:--companion-check off" \
+            "erc8001-atomic-swap:--companion-check off"; do
+            ex="${spec%%:*}"
+            flags="${spec#*:}"
             echo "::group::$ex"
             (
               cd "examples/$ex"
               rm -rf build
               reachc="$(cd ../../hs && stack exec -- which reachc)"
-              "$reachc" --disable-reporting --sol index.rsh
+              # shellcheck disable=SC2086 # $flags is intentionally split
+              "$reachc" --disable-reporting --sol $flags index.rsh
               python3 -c 'import json,sys; d=json.load(open("build/index.main.verify.json")); sys.exit(0 if d["vr_verified"] else "vr_verified is false")'
               ./foundry-test/run.sh
             )

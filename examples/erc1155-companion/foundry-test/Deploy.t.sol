@@ -12,11 +12,17 @@ pragma solidity ^0.8.26;
 // verified-solidity-interop's Deploy.t.sol.
 import {ReachContract, T0, T2} from "../src/index.main.sol";
 
+interface Vm {
+    function prank(address) external;
+}
+
 interface IERC1155Balance {
     function balanceOf(address account, uint256 id) external view returns (uint256);
 }
 
 contract DeployTest {
+    Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+
     // ERC1155Wrapped.mint's `to` argument is msg.sender of the _reachp_2
     // call -- this contract itself. OZ's _mint does a safe-transfer
     // acceptance check on contract recipients, so this contract must
@@ -39,8 +45,9 @@ contract DeployTest {
         uint256 tokenId = 7;
         uint256 amount = 1000;
 
-        // Step 1 (constructor): Admin publishes uri/tokenId/amount.
-        ReachContract c = new ReachContract(T0(0, "https://example.test/{id}.json", tokenId, amount));
+        // Step 1 (constructor): Admin publishes uri/tokenId/amount and names
+        // this contract as the recipient.
+        ReachContract c = new ReachContract(T0(0, "https://example.test/{id}.json", tokenId, amount, payable(address(this))));
         require(address(c).code.length > 0, "no code at deployed address");
 
         // Step 2: Admin's second publish deploys the ERC1155Wrapped companion.
@@ -48,8 +55,13 @@ contract DeployTest {
         address companion = computeCreateAddress(address(c), 1);
         require(companion.code.length > 0, "companion not deployed");
 
-        // Step 3: this contract acts as Recipient; msg.sender here becomes
-        // the mint's `to` argument inside the generated contract.
+        // Step 3: nobody but the named recipient may claim the mint.
+        vm.prank(address(0xBEEF));
+        (bool ok, ) = address(c).call(abi.encodeCall(ReachContract._reachp_2, (T2(0))));
+        require(!ok, "non-recipient claimed the mint");
+
+        // This contract is the named Recipient; msg.sender here becomes the
+        // mint's `to` argument inside the generated contract.
         c._reachp_2(T2(0));
 
         uint256 bal = IERC1155Balance(companion).balanceOf(address(this), tokenId);
