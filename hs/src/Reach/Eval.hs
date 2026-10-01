@@ -129,8 +129,8 @@ makeMapEnv = do
   me_ms <- newIORef mempty
   return $ MapEnv {..}
 
-makeEnv :: Connectors -> Counter -> Counter -> IO Env
-makeEnv cns idC uniC = do
+makeEnv :: Bool -> Connectors -> Counter -> Counter -> IO Env
+makeEnv e_forceVerifyArithmetic cns idC uniC = do
   let e_id = idC
   let e_who = Nothing
   let e_stack = []
@@ -168,7 +168,7 @@ makeEnv cns idC uniC = do
   e_exn <- newIORef $ ExnEnv False Nothing Nothing SLM_Module
   e_mape <- makeMapEnv
   e_droppedAsserts <- newCounter 0
-  let e_appr = Left $ app_default_opts e_id e_droppedAsserts cns
+  let e_appr = Left $ app_default_opts e_forceVerifyArithmetic e_id e_droppedAsserts cns
   let e_compileProg = const $ impossible "compileProg"
   e_universe <- readCounter uniC
   return (Env {..})
@@ -196,11 +196,13 @@ data Evald m a = Evald
   , evEnv :: SLEnv
   }
 
-evalBundle :: Connectors -> JSBundle -> Bool -> IO (Evald m a)
-evalBundle cns (JSBundle mods) addToEnvForEditorInfo = do
+-- `forceVerifyArith` turns on arithmetic verification for every app,
+-- overriding setOptions({verifyArithmetic: false}); `reachc --sol` sets it.
+evalBundle :: Bool -> Connectors -> JSBundle -> Bool -> IO (Evald m a)
+evalBundle forceVerifyArith cns (JSBundle mods) addToEnvForEditorInfo = do
   evUniC <- newCounter 0
   evIdC <- newCounter 0
-  evalEnv <- makeEnv cns evIdC evUniC
+  evalEnv <- makeEnv forceVerifyArith cns evIdC evUniC
   let evRun = flip runReaderT evalEnv
   let exe = fst $ hdDie mods
   let evalPlus = do
@@ -275,8 +277,9 @@ prepareDAppCompiles compileDL (Evald {..}) = do
                           case toplevel of
                             False -> do
                               cns <- readDlo dlo_connectors
+                              forceVA <- e_forceVerifyArithmetic <$> ask
                               void $ liftIO $ incCounter evUniC
-                              newEnv <- liftIO $ makeEnv cns evIdC evUniC
+                              newEnv <- liftIO $ makeEnv forceVA cns evIdC evUniC
                               local (const newEnv) m
                             True -> m
                     dl <-

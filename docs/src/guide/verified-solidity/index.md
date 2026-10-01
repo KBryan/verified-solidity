@@ -29,6 +29,10 @@ In this mode the compiler forces the Ethereum connector regardless of the source
 Because verification runs before code generation and a failure aborts compilation, the emitted Solidity is verified-or-absent by construction.
 For the same reason, `--sol` refuses to run when verification has been disabled via the environment.
 
+`--sol` also always verifies arithmetic: every addition, subtraction, multiplication, division, and modulus is proven free of overflow, wraparound, and division by zero.
+This is the `verifyArithmetic` option, which is off by default in ordinary compiles; under `--sol` it is forced on, and `setOptions({ verifyArithmetic: false })` has no effect.
+A program whose arithmetic might overflow therefore fails to compile under `--sol`, with a counterexample.
+
 ## The three artifacts
 
 A successful compile writes exactly three files into the output directory:
@@ -44,6 +48,7 @@ A failing compile exits nonzero, prints the usual counterexample ("Violation Wit
 `verify.json` is a stable, machine-readable summary of what the verifier checked:
 
 + `vr_verified` — whether every theorem was proven.
++ `vr_verifyArithmetic` — whether arithmetic safety was among the proven theorems (always `true` under `--sol`).
 + `vr_theoremCount`, `vr_succeeded`, `vr_failed`, `vr_timedOut`, `vr_omittedRepeats` — theorem counts.
 + `vr_modes` — one entry per honesty mode checked (e.g. "ALL participants are honest", "NO participants are honest"), each with its failure count.
 + `vr_failures` — one entry per failure, with the theorem kind, source location, optional message, a timeout flag, and the full counterexample witness text.
@@ -51,7 +56,7 @@ A failing compile exits nonzero, prints the usual counterexample ("Violation Wit
 A minimal CI gate looks like:
 
 ```cmd
-$ python3 -c "import json; d = json.load(open('build/index.main.verify.json')); assert d['vr_verified'] and d['vr_theoremCount'] > 0"
+$ python3 -c "import json; d = json.load(open('build/index.main.verify.json')); assert d['vr_verified'] and d['vr_verifyArithmetic'] and d['vr_theoremCount'] > 0"
 ```
 
 ## Compatibility

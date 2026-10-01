@@ -7,8 +7,9 @@ This is an actively maintained, independent continuation of the
 (Apache-2.0; see `LICENSE` and `NOTICE`), with a modernized toolchain
 (solc 0.8.26, z3 4.12.5, GHC 9.6.7) and a first-class **verified-Solidity
 output mode**: the compiler runs Z3-based formal verification (token
-linearity, balance sufficiency, arithmetic overflow, assertion honesty under
-both honest and dishonest participant models) on every compile and — only if
+linearity, balance sufficiency, assertion honesty under both honest and
+dishonest participant models, and — always in verified-Solidity mode —
+arithmetic overflow, underflow, and division by zero) on every compile and — only if
 verification succeeds — emits a self-contained `.sol` file, its ABI, and a
 machine-readable verification report that drop into standard Ethereum tooling
 (Foundry, Hardhat, ethers, viem). No Docker, no JS runtime, no Algorand
