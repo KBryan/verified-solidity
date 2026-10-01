@@ -99,9 +99,11 @@ jobs:
 
       - name: Unit + verified-Solidity golden tests
         working-directory: hs
-        run: |
-          stack test --fast reach:test:reach-test --test-arguments \
-            "-p '/sol_only/ || /sol_companion/ || /solCheck/ || /companion-check/ || /VerifyReport/ || /reachc --sol/'"
+        env:
+          # Passed via tasty's env var: stack does not strip single quotes
+          # inside --test-arguments, so a quoted -p pattern fails to parse.
+          TASTY_PATTERN: /sol_only/ || /sol_companion/ || /solCheck/ || /companion-check/ || /VerifyReport/ || /reachc --sol/
+        run: stack test --fast reach:test:reach-test
 
       - uses: foundry-rs/foundry-toolchain@v1
 
