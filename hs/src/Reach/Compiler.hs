@@ -10,9 +10,10 @@ where
 -- We allow name shadowing because we want to use `p` for every program AST
 -- to ensure that we don't accidentally use things out of order.
 
+import Control.Exception (onException)
 import Control.Monad
 import Data.IORef
-import Data.List (isPrefixOf)
+import Data.List (stripPrefix)
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import qualified Data.Set as S
@@ -75,6 +76,28 @@ all_connectors =
       , connect_algo
       ]
 
+-- The files `--sol` may leave in the output directory for source root `root`:
+-- <root>.<app>.{sol,abi.json,verify.json,sol.solc.json} plus companion copies
+-- <root>.<app>.companion.<Contract>.sol. Removes those whose <app> satisfies
+-- `forApp`, matching names exactly so unrelated files are never touched.
+removeSolArtifacts :: FilePath -> String -> (String -> Bool) -> IO ()
+removeSolArtifacts dir root forApp = do
+  e <- doesDirectoryExist dir
+  when e $ do
+    fs <- listDirectory dir
+    forM_ (filter isArt fs) $ \f -> removeFile $ dir </> f
+  where
+    isArt f = fromMaybe False $ do
+      rest <- stripPrefix (root <> ".") f
+      let (app, x) = break (== '.') rest
+      guard $ not (null app) && forApp app
+      kind <- stripPrefix "." x
+      return $ kind `elem` ["sol", "abi.json", "verify.json", "sol.solc.json"] || isCompanion kind
+    isCompanion k = fromMaybe False $ do
+      c <- stripPrefix "companion." k
+      cn <- reverse <$> stripPrefix (reverse ".sol") (reverse c)
+      return $ not (null cn) && '.' `notElem` cn
+
 mkCompileProg :: CompilerConfig -> CompileDLProg
 mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
   let ccOutput' = wrapOutput (T.pack outputFile <> ".") ccOutput
@@ -104,20 +127,12 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
           Just c -> return $ M.singleton (conName c) c
           Nothing ->
             solDie "reachc: --sol requires the ETH connector, but this application's `connectors` option excludes ETH"
-  when ccSolOnly $ do
-    forM_ ["sol", "abi.json", "verify.json", "sol.solc.json"] $ \l -> do
-      let (_, fp) = ccOutput' True l
-      e <- doesFileExist fp
-      when e $ removeFile fp
-    -- Companion-source copies are named <src>.<app>.companion.<Contract>.sol;
-    -- remove stale ones from prior runs so failure leaves no artifacts behind.
-    let (_, solfp) = ccOutput' True "sol"
-    let bd = takeDirectory solfp
-    let pfx = takeBaseName solfp <> ".companion."
-    e <- doesDirectoryExist bd
-    when e $ do
-      fs <- listDirectory bd
-      forM_ (filter (pfx `isPrefixOf`) fs) $ \f -> removeFile $ bd </> f
+  -- `compile` already swept this source's --sol artifacts before
+  -- evaluation; sweep this app's again in case it is compiled outside the
+  -- requested tops (e.g. a child app reached via `new Contract`).
+  let solArtDir = takeDirectory $ snd $ ccOutput' True "sol"
+  let clearSolArtifacts = removeSolArtifacts solArtDir (takeBaseName ccSource) (== outputFile)
+  when ccSolOnly clearSolArtifacts
   case ccStopAfterEval of
     True -> return mempty
     False -> do
@@ -258,11 +273,16 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
       -- the knowledge graph.
       --
       -- The SMT engine does the standard SMT checking thing.
-      case ccShouldVerify of
+      -- The action that publishes verify.json (and, under --sol, the
+      -- companion copies) for a successful compile. It runs only after code
+      -- generation succeeds, so verify.json is the last artifact written and
+      -- its presence with `vr_verified: true` implies the rest are complete.
+      finishArtifacts <- case ccShouldVerify of
         False -> do
           putStrLn "!!! Verification Disabled.  !!!"
           putStrLn "!!! Assertions NOT checked. !!!"
           putStrLn "!!! This is not safe.       !!!"
+          return $ return ()
         True -> do
           let vo_out = ccOutput'
           let vo_mvcs = doIf dlo_connectors' dlo_verifyPerConnector
@@ -290,16 +310,21 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
                 concatMap
                   (\smr -> map ((,) smr) $ solCheckFatalProps ccCompanionCheck ccSolOnly smr)
                   companions
-          forM_ vo_report $ \r -> do
-            acc <- readIORef r
-            let (_, vrf) = ccOutput' True "verify.json"
-            writeVerifyReport vrf $
-              mkVerifyReport (T.pack ccSource) (T.pack outputFile) (ec == ExitSuccess && null fatals) companions acc
+          let writeReport ok =
+                forM_ vo_report $ \r -> do
+                  acc <- readIORef r
+                  let (_, vrf) = ccOutput' True "verify.json"
+                  writeVerifyReport vrf $
+                    mkVerifyReport (T.pack ccSource) (T.pack outputFile) ok companions acc
+          -- On failure the report (vr_verified: false) is the only artifact.
+          unless (ec == ExitSuccess && null fatals) $ writeReport False
           maybeDie ec
           unless (null fatals) $ solDie $ solCheckFatalMsg fatals
-          when ccSolOnly $
-            forM_ (filter (isJust . smr_artifact) companions) $ \smr ->
-              copyFile (smr_srcAbs smr) (compFp smr)
+          return $ do
+            when ccSolOnly $
+              forM_ (filter (isJust . smr_artifact) companions) $ \smr ->
+                copyFile (smr_srcAbs smr) (compFp smr)
+            writeReport True
       -- Once we know that we've passed the verification engine, we can
       -- remove variables that only occur in `assert` and `invariant`
       -- statements. The only hard part of this is noticing that some loop
@@ -419,10 +444,19 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
       let cgOutput = ccOutput'
       let cgAbi = ccSolOnly
       let cgCfg = ConGenConfig {..}
-      crs <- forM dlo_connectors' $ \c -> do
-        let n = conName c
-        loud $ "running connector " <> show n
-        conGen c cgCfg $ plp_cpp p
+      -- Under --sol a failure anywhere in code generation (solc errors, the
+      -- bytecode size limit, ...) must not leave a partial artifact set.
+      let guardSol m =
+            case ccSolOnly of
+              False -> m
+              True -> m `onException` clearSolArtifacts
+      crs <- guardSol $ do
+        crs <- forM dlo_connectors' $ \c -> do
+          let n = conName c
+          loud $ "running connector " <> show n
+          conGen c cgCfg $ plp_cpp p
+        finishArtifacts
+        return crs
       -- Those connector info things will be given to the JS code to get
       -- included in the actual backend.
       case ccSolOnly of
@@ -461,6 +495,14 @@ compile (CompilerConfig {..}) = do
   let ccSourceRoot = takeBaseName ccSource
   let ccOutput' = wrapOutput (T.pack $ ccSourceRoot <> ".") ccOutput
   let compileProg = mkCompileProg $ CompilerConfig {ccOutput = ccOutput', ..}
+  -- Under --sol, remove every artifact a previous run left for the apps about
+  -- to be compiled before anything can fail, so an early failure (parse,
+  -- eval, a renamed export) never leaves stale output next to its source.
+  when ccSolOnly $
+    removeSolArtifacts
+      (takeDirectory $ snd $ ccOutput' True "sol")
+      ccSourceRoot
+      (\app -> maybe True (S.member app) ccTops)
   -- First, we actually read the source files. This function is the only thing
   -- that will read the disk. It produces a "JS Bundle" which is a map from
   -- locations to code. This is so that we don't read the same module code

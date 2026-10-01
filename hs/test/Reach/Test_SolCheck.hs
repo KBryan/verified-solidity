@@ -1,5 +1,6 @@
 module Reach.Test_SolCheck
   ( spec_solCheckClassify
+  , spec_solCheckResults
   , spec_solCheckLevels
   )
 where
@@ -68,6 +69,17 @@ nonChcWarning =
     , sd_formatted = "Warning: Unused local variable.\n --> Good.sol:7:5:\n"
     }
 
+-- An SMTChecker failure surfaces as a severity "error" diagnostic with no
+-- "CHC: " prefix, so solCheckClassify alone drops it.
+smtErrorDiag :: SolcDiag
+smtErrorDiag =
+  SolcDiag
+    { sd_code = "1834"
+    , sd_severity = "error"
+    , sd_message = "Unimplemented feature error: unsupported construct"
+    , sd_formatted = "UnimplementedFeatureError: unsupported construct\n --> Good.sol:7:5:\n"
+    }
+
 spec_solCheckClassify :: Spec
 spec_solCheckClassify = describe "solCheckClassify" $ do
   it "classifies a proven check" $ do
@@ -99,6 +111,34 @@ spec_solCheckClassify = describe "solCheckClassify" $ do
   it "sorts results by location for deterministic reports" $ do
     let rs = solCheckClassify [unknownDiag, provenDiag, violatedDiag]
     map spr_at rs `shouldBe` ["Good.sol:9:5", "Hard.sol:6:7", "Probe.sol:5:5"]
+
+spec_solCheckResults :: Spec
+spec_solCheckResults = describe "solCheckResults" $ do
+  it "passes classified results through when solc reported no errors" $ do
+    solCheckResults [provenDiag, summaryDiag, nonChcWarning]
+      `shouldBe` solCheckClassify [provenDiag]
+  it "turns a run with no property results into unknown" $ do
+    map spr_status (solCheckResults []) `shouldBe` ["unknown"]
+    map spr_status (solCheckResults [summaryDiag, nonChcWarning]) `shouldBe` ["unknown"]
+  it "adds an unknown result when solc reported an error" $ do
+    case solCheckResults [provenDiag, smtErrorDiag] of
+      [p, e] -> do
+        spr_status p `shouldBe` "proven"
+        spr_status e `shouldBe` "unknown"
+        fmap (T.isInfixOf "UnimplementedFeatureError") (spr_counterexample e) `shouldBe` Just True
+      ps -> expectationFailure $ "expected two results, got " <> show ps
+  it "makes an errored or empty run fatal at require" $ do
+    let m ps =
+          SolModuleReport
+            { smr_path = "v.sol"
+            , smr_contract = "V"
+            , smr_solcVersion = ""
+            , smr_artifact = Nothing
+            , smr_properties = ps
+            , smr_srcAbs = "v.sol"
+            }
+    solCheckFatalProps CCL_Require False (m $ solCheckResults [smtErrorDiag]) `shouldSatisfy` (not . null)
+    solCheckFatalProps CCL_Require False (m $ solCheckResults []) `shouldSatisfy` (not . null)
 
 subBS :: String -> LB.ByteString -> Bool
 subBS needle hay = needle `isInfixOf` LB.unpack hay
