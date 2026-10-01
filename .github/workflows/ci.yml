@@ -124,3 +124,49 @@ jobs:
             )
             echo "::endgroup::"
           done
+
+  format:
+    name: Haskell formatting (ormolu)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mo
+        run: |
+          . ./DEPS
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "$MO_URL" -o "$HOME/.local/bin/mo"
+          chmod +x "$HOME/.local/bin/mo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - uses: haskell-actions/setup@v2
+        with:
+          enable-stack: true
+          stack-no-global: true
+
+      - name: Cache stack (ormolu)
+        uses: actions/cache@v4
+        with:
+          path: ~/.stack
+          key: stack-ormolu-${{ runner.os }}-${{ hashFiles('hs/ormolu-tool/stack.yaml', 'hs/ormolu-tool/stack.yaml.lock') }}
+
+      - name: Run make hs-format
+        run: make -C hs hs-format
+
+      - name: Fail on formatting changes
+        run: |
+          git diff > ormolu.patch
+          if [ -s ormolu.patch ]; then
+            git diff --stat
+            echo "::error::Haskell sources are not ormolu-formatted; apply the ormolu-patch artifact (git apply ormolu.patch)"
+            exit 1
+          fi
+
+      - name: Upload formatting patch
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ormolu-patch
+          path: ormolu.patch
+          if-no-files-found: ignore
