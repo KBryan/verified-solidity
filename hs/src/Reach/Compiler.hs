@@ -315,7 +315,7 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
                   acc <- readIORef r
                   let (_, vrf) = ccOutput' True "verify.json"
                   writeVerifyReport vrf $
-                    mkVerifyReport (T.pack ccSource) (T.pack outputFile) ok companions acc
+                    mkVerifyReport (T.pack ccSource) (T.pack outputFile) ok dlo_verifyArithmetic companions acc
           -- On failure the report (vr_verified: false) is the only artifact.
           unless (ec == ExitSuccess && null fatals) $ writeReport False
           maybeDie ec
@@ -469,7 +469,7 @@ mkCompileProg (CompilerConfig {..}) appDescr outputFile dl = do
 printKeywordInfo :: IO ()
 printKeywordInfo = do
   djp <- gatherDeps_top ReachStdLib False "."
-  e <- evalBundle all_connectors djp True
+  e <- evalBundle False all_connectors djp True
   printBaseKeywordInfo $ M.map sss_val $ evEnv e
 
 -- This function is the actual compiler.
@@ -524,7 +524,7 @@ compile (CompilerConfig {..}) = do
   -- interpreter where most of the primitives are constructing a residual
   -- program in the "DL" language. Creating a statement in that language is
   -- called "lifting".)
-  evald <- evalBundle all_connectors djp False
+  evald <- evalBundle ccSolOnly all_connectors djp False
 
   -- This does a tiny bit more environment setup and it restricts the set of
   -- DApps that get compiled to the ones passed at the command-line. This is

@@ -160,6 +160,9 @@ data VerifyReport = VerifyReport
   { vr_source :: T.Text
   , vr_app :: T.Text
   , vr_verified :: Bool
+  , -- Whether arithmetic overflow/underflow/division were proven safe
+    -- (always true under --sol; otherwise setOptions({verifyArithmetic})).
+    vr_verifyArithmetic :: Bool
   , vr_theoremCount :: Int
   , vr_succeeded :: Int
   , vr_failed :: Int
@@ -178,6 +181,7 @@ instance ToJSON VerifyReport where
       [ "vr_source" .= vr_source
       , "vr_app" .= vr_app
       , "vr_verified" .= vr_verified
+      , "vr_verifyArithmetic" .= vr_verifyArithmetic
       , "vr_theoremCount" .= vr_theoremCount
       , "vr_succeeded" .= vr_succeeded
       , "vr_failed" .= vr_failed
@@ -189,8 +193,8 @@ instance ToJSON VerifyReport where
       , "vr_assumptions" .= vr_assumptions
       ]
 
-mkVerifyReport :: T.Text -> T.Text -> Bool -> [SolModuleReport] -> VerifyReportAccum -> VerifyReport
-mkVerifyReport vr_source vr_app vr_verified vr_solidity (VerifyReportAccum {..}) =
+mkVerifyReport :: T.Text -> T.Text -> Bool -> Bool -> [SolModuleReport] -> VerifyReportAccum -> VerifyReport
+mkVerifyReport vr_source vr_app vr_verified vr_verifyArithmetic vr_solidity (VerifyReportAccum {..}) =
   VerifyReport
     { vr_theoremCount = vra_succ + vra_fail + vra_time
     , vr_succeeded = vra_succ

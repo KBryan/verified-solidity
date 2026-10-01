@@ -109,6 +109,10 @@ data Env = Env
   , e_infections :: IORef Infections
   , e_compileProg :: CompileProg
   , e_universe :: Int
+  , -- Set under --sol: arithmetic is always verified, regardless of
+    -- setOptions({verifyArithmetic}), because verified-Solidity output
+    -- claims arithmetic safety.
+    e_forceVerifyArithmetic :: Bool
   }
 
 instance HasCounter Env where
@@ -337,10 +341,10 @@ mkDefaultApp = do
   where
     mt_sb = JSStatementBlock JSNoAnnot [] JSNoAnnot JSSemiAuto
 
-app_default_opts :: Counter -> Counter -> Connectors -> DLOpts
-app_default_opts idxr dar cns =
+app_default_opts :: Bool -> Counter -> Counter -> Connectors -> DLOpts
+app_default_opts forceVerifyArith idxr dar cns =
   DLOpts
-    { dlo_verifyArithmetic = False
+    { dlo_verifyArithmetic = forceVerifyArith
     , dlo_verifyPerConnector = False
     , dlo_autoTrackPublishedTokens = True
     , dlo_connectors = cns
@@ -4066,7 +4070,9 @@ evalPrim p sargs =
                   Left x -> expect_thrown opt_at $ Err_App_InvalidOptionValue k x
       dlo <- ae_dlo <$> aisiGet aisi_env
       dlo' <- foldrWithKeyM use_opt dlo opts
-      aisiPut aisi_env $ \ae -> ae {ae_dlo = dlo'}
+      forceVA <- e_forceVerifyArithmetic <$> ask
+      let dlo'' = dlo' {dlo_verifyArithmetic = forceVA || dlo_verifyArithmetic dlo'}
+      aisiPut aisi_env $ \ae -> ae {ae_dlo = dlo''}
       return $ public $ SLV_Null at "setOptions"
     SLPrim_adaptReachAppTupleArgs -> do
       tat <- withAt id

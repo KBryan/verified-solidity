@@ -98,46 +98,56 @@ jobs:
         id: build
         run: make -C hs hs-build
 
+      # Golden tests compare compiler output against checked-in .txt files.
+      # tasty-golden silently creates a missing .txt and passes, so both
+      # golden steps run with TASTY_NO_CREATE; on any golden failure, the
+      # accept step below proposes new/changed goldens for review.
       - name: Unit + verified-Solidity golden tests
+        id: sol-tests
         working-directory: hs
         env:
           # Passed via tasty's env var: stack does not strip single quotes
           # inside --test-arguments, so a quoted -p pattern fails to parse.
           TASTY_PATTERN: /sol_only/ || /sol_companion/ || /solCheck/ || /companion-check/ || /VerifyReport/ || /reachc --sol/
+          TASTY_NO_CREATE: "true"
         run: stack test --fast reach:test:reach-test
 
-      # Example programs are golden-tested by compiling each .rsh and
-      # comparing against its .txt. tasty-golden silently creates a missing
-      # .txt and passes, so require it to exist; on failure, regenerate the
-      # missing goldens and upload them for review.
       # erc1155-companion/erc1155.rsh is a library module: compiled alone it
       # builds an empty default app for every connector, which needs ALGO's
       # `goal`, so it is golden-tested only by the full local suite.
       - name: Verified-Solidity example goldens
+        id: example-tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         working-directory: hs
         env:
           TASTY_PATTERN: (/verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/) && !/erc1155.rsh/
           TASTY_NO_CREATE: "true"
         run: stack test --fast reach:test:reach-test
 
-      - name: Generate missing example goldens
-        if: failure()
+      # The CI equivalent of `make hs-test-accept` over the patterns above:
+      # never committed automatically, only uploaded for human review.
+      - name: Propose goldens (accept run)
+        if: ${{ !cancelled() && (steps.sol-tests.outcome == 'failure' || steps.example-tests.outcome == 'failure') }}
         working-directory: hs
         env:
-          TASTY_PATTERN: (/verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/) && !/erc1155.rsh/
+          TASTY_PATTERN: /sol_only/ || /sol_companion/ || ((/verified-solidity/ || /erc1155-companion/ || /erc8001-atomic-swap/) && !/erc1155.rsh/)
+          TASTY_ACCEPT: "true"
         run: |
           stack test --fast reach:test:reach-test || true
           cd ..
-          git ls-files --others --exclude-standard -- 'examples/*.txt' > new-goldens.txt
-          cat new-goldens.txt
-          rsync -a --files-from=new-goldens.txt . new-goldens/
+          mkdir -p proposed-goldens
+          git diff -- 'hs/t/*.txt' 'examples/*.txt' > proposed-goldens/changed.patch
+          git ls-files --others --exclude-standard -- 'hs/t/*.txt' 'examples/*.txt' > proposed-goldens/new-files.txt
+          rsync -a --files-from=proposed-goldens/new-files.txt . proposed-goldens/new/
+          echo "--- changed goldens:"; git diff --stat -- 'hs/t/*.txt' 'examples/*.txt'
+          echo "--- new goldens:"; cat proposed-goldens/new-files.txt
 
-      - name: Upload generated goldens
-        if: failure()
+      - name: Upload proposed goldens
+        if: ${{ !cancelled() && (steps.sol-tests.outcome == 'failure' || steps.example-tests.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
         with:
-          name: example-goldens
-          path: new-goldens/
+          name: proposed-goldens
+          path: proposed-goldens/
           if-no-files-found: ignore
 
       # Run even when the golden checks fail, as long as the build

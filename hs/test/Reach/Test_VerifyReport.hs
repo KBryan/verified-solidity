@@ -52,13 +52,14 @@ spec_verifyReportShape = describe "VerifyReport JSON shape" $ do
                 ]
             , smr_srcAbs = "/abs/vault.sol"
             }
-    let vr = mkVerifyReport "x.rsh" "main" False [smr] acc
+    let vr = mkVerifyReport "x.rsh" "main" False True [smr] acc
     let expected :: Value
         expected =
           object
             [ "vr_source" .= ("x.rsh" :: String)
             , "vr_app" .= ("main" :: String)
             , "vr_verified" .= False
+            , "vr_verifyArithmetic" .= True
             , "vr_theoremCount" .= (6 :: Int)
             , "vr_succeeded" .= (5 :: Int)
             , "vr_failed" .= (1 :: Int)

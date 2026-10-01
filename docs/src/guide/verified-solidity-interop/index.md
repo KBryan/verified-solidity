@@ -23,7 +23,7 @@ See `examples/verified-solidity-interop/` for the complete worked example, inclu
 Be precise about what is verified by which engine; the layers are different and the report distinguishes them.
 
 1. **Proven by Z3 (the Reach pipeline).**
-The Reach program is verified exactly as in the companion-free workflow: token linearity, balance sufficiency, arithmetic overflow, and assertion honesty under both honest and dishonest participant models.
+The Reach program is verified exactly as in the companion-free workflow: token linearity, balance sufficiency, assertion honesty under both honest and dishonest participant models, and, under `--sol`, arithmetic overflow, underflow, and division by zero.
 When a `remote` interface uses `Refine`, the precondition is proven at every call site: passing an argument that could violate it is a verification failure with a counterexample witness.
 
 2. **Proven by solc's SMTChecker (the companion contract).**
