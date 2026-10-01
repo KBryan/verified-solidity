@@ -24,6 +24,7 @@ module Reach.Connector.ETH_SolCheck
   , solCheckFatalMsg
   , SolcDiag (..)
   , solCheckClassify
+  , solCheckResults
   , solCheckRequest
   )
 where
@@ -39,6 +40,7 @@ import qualified Data.Text as T
 import Reach.Util
 import Reach.VerifyReport
 import System.Directory
+import System.Exit
 import System.FilePath
 import System.IO.Temp
 import System.IO.Unsafe (unsafePerformIO)
@@ -180,6 +182,29 @@ solCheckClassify ds = sortOn (\p -> (spr_at p, spr_target p, spr_status p)) $ ma
             }
     firstLine = T.takeWhile (/= '\n')
 
+-- The per-property results of one companion analysis run. solCheckClassify
+-- only understands "CHC: ..." diagnostics, so a run in which solc reported an
+-- error (e.g. an SMTChecker internal or unimplemented-feature error) or
+-- produced no property results at all must not read as "nothing failed":
+-- both become an explicit `unknown`, which is fatal at level `require`.
+solCheckResults :: [SolcDiag] -> [SolPropertyResult]
+solCheckResults ds =
+  case (errs, props) of
+    ([], []) ->
+      [unk "solc reported no model-checker results for this source"]
+    ([], _) -> props
+    (_, _) ->
+      props
+        <> [unk $ T.intercalate "\n" $ "solc reported errors during analysis:" : map errText errs]
+  where
+    props = solCheckClassify ds
+    errs = filter ((== "error") . sd_severity) ds
+    errText (SolcDiag {..}) =
+      case sd_formatted of
+        "" -> sd_message
+        f -> T.stripEnd f
+    unk m = SolPropertyResult "companion analysis" "unknown" "" (Just m)
+
 -- Extract "path:line:col" from the "--> path:line:col:" arrow line solc puts
 -- in formatted messages.
 diagAt :: T.Text -> T.Text
@@ -192,12 +217,18 @@ diagAt fm =
 solCheckRunOn :: Integer -> FilePath -> IO (Either String [SolcDiag])
 solCheckRunOn tmo solf = do
   let bp = takeDirectory solf
-  (_ec, stdout, stderr) <-
+  (ec, stdout, stderr) <-
     readProcessWithExitCode "solc" ["--allow-paths", bp, "--standard-json"] $
       LB.toStrict $ encode $ solCheckRequest tmo solf
-  case eitherDecodeStrict stdout of
-    Right (SolcDiags ds) -> return $ Right ds
-    Left m ->
+  case (ec, eitherDecodeStrict stdout) of
+    (ExitFailure c, _) ->
+      return $
+        Left $
+          "solc --standard-json exited with code " <> show c
+            <> "\nSTDERR:\n"
+            <> bunpack stderr
+    (ExitSuccess, Right (SolcDiags ds)) -> return $ Right ds
+    (ExitSuccess, Left m) ->
       return $
         Left $
           "solc --standard-json produced unparseable output: " <> m
@@ -283,7 +314,7 @@ solCheckRegisterSol solf cn = do
                 solCheckRunOn scc_timeout solf >>= \case
                   Left err ->
                     return [SolPropertyResult "companion analysis" "unknown" "" (Just $ s2t err)]
-                  Right ds -> return $ solCheckClassify ds
+                  Right ds -> return $ solCheckResults ds
           modifyIORef solCheckRegR $ M.insert k $ mkModule solf cn ka props ver
 
 -- Record a pre-compiled (.bin / .json) companion: we cannot analyze bytecode.
