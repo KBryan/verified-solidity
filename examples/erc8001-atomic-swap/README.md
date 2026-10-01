@@ -12,7 +12,14 @@ repo-level LICENSE file at the time of writing, and the vendored copy is not
 pinned to an upstream commit). ERC-8001 is a proposed standard, not a final
 one; check the EIP page for its current status before relying on it. The
 vendored OpenZeppelin files under `oz/` are MIT-licensed; see
-[`oz/LICENSE`](oz/LICENSE).
+[`oz/LICENSE`](oz/LICENSE). They are OpenZeppelin 4.4.1/4.5.0, except
+`utils/cryptography/ECDSA.sol` (4.7.3) and `utils/Strings.sol` (4.7.0),
+which were upgraded for CVE-2022-35961: older `ECDSA.recover(bytes32, bytes)`
+also accepted the 64-byte compact form of a signature, giving every
+signature two valid encodings. ERC-8001 replay protection keys on the intent
+hash, so that was not exploitable here, but the patched version accepts only
+the 65-byte form. (`ERC8001.sol`'s doc comment still mentions 64-byte
+signatures; it is vendored unmodified.)
 
 Alice deploys `AtomicSwapReachAdapter.sol` (a thin, hand-written wrapper
 around the vendored `AtomicSwap`/`ERC8001`/`IERC8001` contracts -- see that
@@ -48,6 +55,13 @@ nothing, but the adapter is written so the program can always finish:
 - **Cancellation and expiry end the program.** If Alice cancels, or the
   intent expires (for example because Bob never accepts), Bob's final step
   returns `false` without transferring anything.
+
+One upstream ERC-8001 behaviour is left as is: `acceptCoordination` records
+but never checks an attestation's `nonce` and `conditionsHash`. This adapter
+uses `conditionsHash = bytes32(0)` by convention, but cannot enforce it
+without re-implementing the vendored `acceptCoordination`, which is
+`external` and so cannot be wrapped with a `super` call. Treat
+`conditionsHash` as informational.
 
 `executeSwap` still reverts while the swap could yet execute (Bob has not
 accepted, or a token approval is missing), so Bob can retry until it
@@ -113,7 +127,8 @@ Reach-orchestrated deploy/propose/execute -- confirmed by asserting both
 tokens' balances actually moved between Alice and Bob. It runs that round
 trip with Alice's address both below and above Bob's, and checks each
 liveness case above: a front-run proposal, direct execution, expiry without
-acceptance, and a non-`partyB` caller being rejected. It does not exercise
+acceptance, and a non-`partyB` caller being rejected. It also checks that the
+64-byte compact encoding of a valid signature is rejected (CVE-2022-35961). It does not exercise
 an ethers.js/viem `signTypedData` flow; see `index.rsh`'s header comment for
 why that's outside what this environment can run end-to-end.
 
